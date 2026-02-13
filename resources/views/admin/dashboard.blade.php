@@ -161,13 +161,13 @@
 @push('scripts')
 <script>
     const ctx = document.getElementById('attendanceChart').getContext('2d');
-    new Chart(ctx, {
+    const chart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+            labels: [],
             datasets: [{
                 label: 'Attendance Rate',
-                data: [85, 89, 92, 87, 91],
+                data: [],
                 borderColor: '#22d3ee',
                 borderWidth: 3,
                 backgroundColor: 'rgba(34, 211, 238, 0.12)',
@@ -193,9 +193,60 @@
         }
     });
 
-    setInterval(() => {
-        document.getElementById('today-attendance').textContent =
-            (85 + Math.floor(Math.random() * 10)) + '%';
-    }, 5000);
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    const shortDay = (dateStr) => {
+        try {
+            return new Date(dateStr).toLocaleDateString(undefined, { weekday: 'short' });
+        } catch {
+            return dateStr;
+        }
+    };
+
+    const loadDashboard = async () => {
+        try {
+            const res = await fetch('/api/v1/analytics/dashboard');
+            if (!res.ok) throw new Error('network');
+            const json = await res.json();
+
+            const stats = json.statistics || {};
+            setText('total-students', stats.total_students ?? '0');
+            setText('active-classes', stats.active_classes ?? '0');
+            setText('today-attendance', (stats.today_attendance_rate ?? 0) + '%');
+            setText('alerts-count', stats.alerts_count ?? 0);
+
+            const weekly = json.trends?.weekly || [];
+            if (Array.isArray(weekly) && weekly.length) {
+                chart.data.labels = weekly.map(i => shortDay(i.date));
+                chart.data.datasets[0].data = weekly.map(i => Number(i.rate || 0));
+                chart.update();
+            }
+
+            const activityRes = await fetch('/api/v1/activity?limit=8');
+            if (activityRes.ok) {
+                const rows = await activityRes.json();
+                const wrap = document.querySelector('.space-y-4');
+                if (wrap && Array.isArray(rows)) {
+                    wrap.innerHTML = rows.map(r => `
+                        <div class="flex items-start gap-3">
+                            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 mt-2 shadow-glow"></span>
+                            <div>
+                                <p class="text-white font-medium">${r.student_name} marked ${r.status} (${r.class_name})</p>
+                                <p class="text-xs text-slate-400">${new Date(r.marked_at).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch {
+            // Keep the static dashboard content if API is not reachable.
+        }
+    };
+
+    loadDashboard();
+    setInterval(loadDashboard, 5000);
 </script>
 @endpush

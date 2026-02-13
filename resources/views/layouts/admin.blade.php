@@ -71,6 +71,10 @@
         .neon-pill { background: linear-gradient(90deg, rgba(124,58,237,0.9), rgba(34,211,238,0.9)); color: #0b1021; box-shadow: 0 8px 30px rgba(34,211,238,0.28); }
         .card-accent { position: relative; overflow: hidden; }
         .card-accent::after { content: ''; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(124,58,237,0.2), rgba(34,211,238,0)); opacity: 0.7; pointer-events: none; }
+        /* Native select dropdown styling for dark theme (option list). */
+        select { color-scheme: dark; }
+        select option, select optgroup { background-color: #0b1224; color: #e2e8f0; }
+        input[type="date"] { color-scheme: dark; }
         /* Light theme overrides */
         .theme-light body { background: #f7f9fb; color: #0f172a; }
         .theme-light .holo-bg { background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.08), transparent 30%), radial-gradient(circle at 70% 0%, rgba(124,58,237,0.1), transparent 35%), linear-gradient(180deg, #ffffff, #eef2f7); filter: none; }
@@ -84,6 +88,9 @@
         .theme-light .bg-white\/10 { background-color: rgba(15,23,42,0.08) !important; }
         .theme-light .bg-white\/5 { background-color: rgba(15,23,42,0.04) !important; }
         .theme-light .neon-pill { color: #0f172a; }
+        .theme-light select { color-scheme: light; }
+        .theme-light select option, .theme-light select optgroup { background-color: #ffffff; color: #0f172a; }
+        .theme-light input[type="date"] { color-scheme: light; }
         /* Sidebar collapse */
         .sidebar-collapsed #sidebar { width: 5rem; }
         .sidebar-collapsed #sidebar .nav-label,
@@ -115,7 +122,10 @@
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.classes') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.classes') }}">
                     <i class="fas fa-chalkboard-teacher"></i><span class="nav-label">Classes</span>
                 </a>
-                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition" href="#">
+                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.teacher_accounts') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.teacher_accounts') }}">
+                    <i class="fas fa-id-badge"></i><span class="nav-label">Teacher Accounts</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.students') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.students') }}">
                     <i class="fas fa-user-graduate"></i><span class="nav-label">Students</span>
                 </a>
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.attendance') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.attendance') }}">
@@ -124,7 +134,7 @@
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition" href="#">
                     <i class="fas fa-bell"></i><span class="nav-label">Alerts</span>
                 </a>
-                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition" href="#">
+                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.reports') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.reports') }}">
                     <i class="fas fa-file-export"></i><span class="nav-label">Reports</span>
                 </a>
             </nav>

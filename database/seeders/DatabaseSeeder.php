@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Guardrail: do not seed master roster tables unless explicitly enabled.
+        if (app()->environment('production') || !config('finot.roster.allow_seeding')) {
+            $this->command?->warn('DatabaseSeeder: roster seeding disabled (nothing to seed).');
+            return;
+        }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $this->call([AttendanceSeeder::class]);
     }
 }

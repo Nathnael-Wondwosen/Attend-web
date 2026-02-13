@@ -8,6 +8,7 @@ use App\Models\AttSession;
 use App\Models\ClassModel;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AdvancedAnalyticsController extends Controller
@@ -17,44 +18,49 @@ class AdvancedAnalyticsController extends Controller
      */
     public function dashboard()
     {
-        $today = now()->toDateString();
-        
-        // Overall statistics
-        $totalStudents = Student::count();
-        $activeClasses = ClassModel::count();
-        
-        // Today's attendance rate
-        $todayAttendance = $this->getTodayAttendanceRate();
-        
-        // Recent alerts
-        $recentAlerts = $this->getRecentAlerts();
-        
-        // Weekly trend data
-        $weeklyTrend = $this->getWeeklyAttendanceTrend();
-        
-        // Class performance rankings
-        $classPerformance = $this->getClassPerformance();
-        
-        // Attendance patterns
-        $attendancePatterns = $this->getAttendancePatterns();
-        
-        return response()->json([
-            'statistics' => [
-                'total_students' => $totalStudents,
-                'active_classes' => $activeClasses,
-                'today_attendance_rate' => $todayAttendance,
-                'alerts_count' => count($recentAlerts)
-            ],
-            'trends' => [
-                'weekly' => $weeklyTrend,
-                'patterns' => $attendancePatterns
-            ],
-            'rankings' => [
-                'class_performance' => $classPerformance
-            ],
-            'alerts' => $recentAlerts,
-            'timestamp' => now()
-        ]);
+        // This is an intentionally heavy endpoint. Cache briefly to keep the UI fast.
+        $cacheKey = 'analytics:dashboard:v1';
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () {
+            // Overall statistics
+            $totalStudents = Student::count();
+            $activeClasses = ClassModel::count();
+
+            // Today's attendance rate
+            $todayAttendance = $this->getTodayAttendanceRate();
+
+            // Recent alerts
+            $recentAlerts = $this->getRecentAlerts();
+
+            // Weekly trend data
+            $weeklyTrend = $this->getWeeklyAttendanceTrend();
+
+            // Class performance rankings
+            $classPerformance = $this->getClassPerformance();
+
+            // Attendance patterns
+            $attendancePatterns = $this->getAttendancePatterns();
+
+            return [
+                'statistics' => [
+                    'total_students' => $totalStudents,
+                    'active_classes' => $activeClasses,
+                    'today_attendance_rate' => $todayAttendance,
+                    'alerts_count' => count($recentAlerts),
+                ],
+                'trends' => [
+                    'weekly' => $weeklyTrend,
+                    'patterns' => $attendancePatterns,
+                ],
+                'rankings' => [
+                    'class_performance' => $classPerformance,
+                ],
+                'alerts' => $recentAlerts,
+                'timestamp' => now(),
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -62,27 +68,33 @@ class AdvancedAnalyticsController extends Controller
      */
     public function classAnalytics($classId)
     {
-        $class = ClassModel::findOrFail($classId);
-        
-        // Class attendance statistics
-        $attendanceStats = $this->getClassAttendanceStats($classId);
-        
-        // Student performance within class
-        $studentPerformance = $this->getClassStudentPerformance($classId);
-        
-        // Attendance trends for this class
-        $classTrends = $this->getClassTrends($classId);
-        
-        // Risk assessment
-        $riskAssessment = $this->getClassRiskAssessment($classId);
-        
-        return response()->json([
-            'class' => $class,
-            'statistics' => $attendanceStats,
-            'student_performance' => $studentPerformance,
-            'trends' => $classTrends,
-            'risk_assessment' => $riskAssessment
-        ]);
+        $cacheKey = "analytics:class:{$classId}:v1";
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($classId) {
+            $class = ClassModel::findOrFail($classId);
+
+            // Class attendance statistics
+            $attendanceStats = $this->getClassAttendanceStats($classId);
+
+            // Student performance within class
+            $studentPerformance = $this->getClassStudentPerformance($classId);
+
+            // Attendance trends for this class
+            $classTrends = $this->getClassTrends($classId);
+
+            // Risk assessment
+            $riskAssessment = $this->getClassRiskAssessment($classId);
+
+            return [
+                'class' => $class,
+                'statistics' => $attendanceStats,
+                'student_performance' => $studentPerformance,
+                'trends' => $classTrends,
+                'risk_assessment' => $riskAssessment,
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -90,27 +102,33 @@ class AdvancedAnalyticsController extends Controller
      */
     public function studentProfile($studentId)
     {
-        $student = Student::findOrFail($studentId);
-        
-        // Attendance history
-        $attendanceHistory = $this->getStudentAttendanceHistory($studentId);
-        
-        // Attendance patterns and predictions
-        $patterns = $this->getStudentPatterns($studentId);
-        
-        // Risk factors
-        $riskFactors = $this->getStudentRiskFactors($studentId);
-        
-        // Recommendations
-        $recommendations = $this->getStudentRecommendations($studentId, $patterns, $riskFactors);
-        
-        return response()->json([
-            'student' => $student,
-            'attendance_history' => $attendanceHistory,
-            'patterns' => $patterns,
-            'risk_factors' => $riskFactors,
-            'recommendations' => $recommendations
-        ]);
+        $cacheKey = "analytics:student:{$studentId}:v1";
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($studentId) {
+            $student = Student::findOrFail($studentId);
+
+            // Attendance history
+            $attendanceHistory = $this->getStudentAttendanceHistory($studentId);
+
+            // Attendance patterns and predictions
+            $patterns = $this->getStudentPatterns($studentId);
+
+            // Risk factors
+            $riskFactors = $this->getStudentRiskFactors($studentId);
+
+            // Recommendations
+            $recommendations = $this->getStudentRecommendations($studentId, $patterns, $riskFactors);
+
+            return [
+                'student' => $student,
+                'attendance_history' => $attendanceHistory,
+                'patterns' => $patterns,
+                'risk_factors' => $riskFactors,
+                'recommendations' => $recommendations,
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -126,24 +144,30 @@ class AdvancedAnalyticsController extends Controller
         $classId = $request->class_id;
         $targetDate = $request->date;
         
-        // Historical data analysis
-        $historicalData = $this->getHistoricalClassData($classId);
-        
-        // Simple prediction algorithm
-        $prediction = $this->calculateAttendancePrediction($historicalData, $targetDate);
-        
-        // Confidence level
-        $confidence = $this->calculatePredictionConfidence($historicalData);
-        
-        return response()->json([
-            'predicted_attendance_rate' => $prediction,
-            'confidence_level' => $confidence,
-            'factors' => [
-                'historical_average' => $historicalData['average'],
-                'trend_direction' => $historicalData['trend'],
-                'seasonal_factor' => $historicalData['seasonal']
-            ]
-        ]);
+        $cacheKey = "analytics:predict:class={$classId}:date={$targetDate}:v1";
+
+        $payload = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($classId, $targetDate) {
+            // Historical data analysis
+            $historicalData = $this->getHistoricalClassData($classId);
+
+            // Simple prediction algorithm
+            $prediction = $this->calculateAttendancePrediction($historicalData, $targetDate);
+
+            // Confidence level
+            $confidence = $this->calculatePredictionConfidence($historicalData);
+
+            return [
+                'predicted_attendance_rate' => $prediction,
+                'confidence_level' => $confidence,
+                'factors' => [
+                    'historical_average' => $historicalData['average'],
+                    'trend_direction' => $historicalData['trend'],
+                    'seasonal_factor' => $historicalData['seasonal'],
+                ],
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**
@@ -159,28 +183,37 @@ class AdvancedAnalyticsController extends Controller
         $days = $request->days ?? 7;
         $threshold = $request->threshold ?? 0.7;
         
-        $anomalies = $this->detectAttendanceAnomalies($days, $threshold);
-        
-        return response()->json([
-            'anomalies' => $anomalies,
-            'parameters' => [
-                'analysis_period_days' => $days,
-                'threshold' => $threshold
-            ]
-        ]);
+        $cacheKey = "analytics:anomalies:days={$days}:threshold={$threshold}:v1";
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(60), function () use ($days, $threshold) {
+            $anomalies = $this->detectAttendanceAnomalies($days, $threshold);
+
+            return [
+                'anomalies' => $anomalies,
+                'parameters' => [
+                    'analysis_period_days' => $days,
+                    'threshold' => $threshold,
+                ],
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     // Private helper methods
     private function getTodayAttendanceRate()
     {
-        $totalSessions = AttSession::whereDate('started_at', now()->toDateString())->count();
+        $start = now()->startOfDay();
+        $end = now()->endOfDay();
+
+        $totalSessions = AttSession::whereBetween('started_at', [$start, $end])->count();
         if ($totalSessions === 0) return 0;
         
-        $attendedCount = AttAttendance::whereDate('marked_at', now()->toDateString())
+        $attendedCount = AttAttendance::whereBetween('marked_at', [$start, $end])
             ->where('status', 'present')
             ->count();
             
-        $totalCount = AttAttendance::whereDate('marked_at', now()->toDateString())->count();
+        $totalCount = AttAttendance::whereBetween('marked_at', [$start, $end])->count();
         
         return $totalCount > 0 ? round(($attendedCount / $totalCount) * 100, 1) : 0;
     }
@@ -290,7 +323,7 @@ class AdvancedAnalyticsController extends Controller
             "SELECT 
                 s.id, s.full_name,
                 COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / COUNT(*) as attendance_rate,
-                COUNT(CASE WHEN a.status = 'late' THEN 1 END) as late_count,
+                COUNT(CASE WHEN a.status = 'permission' THEN 1 END) as permission_count,
                 COUNT(CASE WHEN a.status = 'absent' THEN 1 END) as absent_count
             FROM students s
             JOIN class_enrollments ce ON s.id = ce.student_id
@@ -372,17 +405,17 @@ class AdvancedAnalyticsController extends Controller
             [$studentId]
         );
 
-        $lates = DB::select(
+        $permissions = DB::select(
             "SELECT COUNT(*) as count
             FROM att_attendance
-            WHERE student_id = ? AND status = 'late'
+            WHERE student_id = ? AND status = 'permission'
             AND marked_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
             [$studentId]
         );
 
         return [
             'recent_absences' => $absences[0]->count ?? 0,
-            'recent_lates' => $lates[0]->count ?? 0,
+            'recent_permissions' => $permissions[0]->count ?? 0,
             'trend' => $absences[0]->count > 3 ? 'concerning' : 'normal'
         ];
     }

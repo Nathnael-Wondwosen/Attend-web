@@ -1,43 +1,97 @@
-﻿@extends('layouts.admin')
+@extends('layouts.admin')
 
 @section('title', 'Finot | Attendance')
-@section('page-label', 'Control room')
-@section('page-title', 'Attendance Control')
-@section('page-subtitle', 'Open sessions, mark status, and sync in real time')
+@section('page-label', 'Review')
+@section('page-title', 'Attendance')
+@section('page-subtitle', 'Select a class, then pick a date to view or edit attendance.')
 
 @section('content')
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <div class="xl:col-span-2 glass rounded-2xl p-4 md:p-6 shadow-glow flex flex-col gap-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs text-slate-400">Class</label>
-                    <select id="att-class" class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                        <option value="">Select class</option>
-                    </select>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+        <div class="lg:col-span-4 glass rounded-2xl p-4 md:p-6 shadow-glow space-y-4">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Step 1</p>
+                    <h3 class="text-lg text-white font-medium">Pick Class</h3>
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs text-slate-400">Session</label>
-                    <div class="flex gap-2">
-                        <select id="att-session" class="flex-1 rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                            <option value="">Select session</option>
-                        </select>
-                        <button id="start-session" class="px-3 rounded-xl neon-pill text-sm font-medium">Start</button>
-                    </div>
+                <button id="att-refresh-classes" type="button" class="h-10 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
+                    <i class="fas fa-rotate"></i><span class="text-sm">Refresh</span>
+                </button>
+            </div>
+
+            <div>
+                <label class="text-xs text-slate-400">Class</label>
+                <select id="att-class" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-xs text-slate-400">From</label>
+                    <input id="att-from" type="date" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs text-slate-400">Date</label>
-                    <input id="att-date" type="date" class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
+                <div>
+                    <label class="text-xs text-slate-400">To</label>
+                    <input id="att-to" type="date" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
+                <div>
+                    <p class="text-white text-sm font-medium">Show drafts</p>
+                    <p class="text-slate-400 text-xs">Off by default (admins mostly need submitted).</p>
+                </div>
+                <label class="inline-flex items-center gap-2">
+                    <input id="att-show-drafts" type="checkbox" class="h-5 w-5 accent-cyan-300" />
+                    <span class="text-sm text-slate-200">Drafts</span>
+                </label>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Step 2</p>
+                    <h3 class="text-lg text-white font-medium">Pick Date</h3>
+                </div>
+                <button id="att-refresh-sessions" type="button" class="h-9 px-3 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2" disabled>
+                    <i class="fas fa-rotate"></i><span class="text-xs">Refresh</span>
+                </button>
+            </div>
+
+            <div id="att-session-list" class="space-y-2 min-h-[320px]">
+                <p class="text-slate-400 text-sm">Select a class to load sessions.</p>
+            </div>
+        </div>
+
+        <div class="lg:col-span-8 glass rounded-2xl p-4 md:p-6 shadow-glow flex flex-col gap-4">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Details</p>
+                    <h3 class="text-lg text-white font-medium" id="att-title">Select a session</h3>
+                    <p class="text-sm text-slate-400 mt-1" id="att-subtitle">Pick a class and date to view attendance.</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-400">Last refresh</p>
+                    <p class="text-white text-sm" id="last-sync">--</p>
+                </div>
+            </div>
+
+            <div id="selected-chip" class="hidden lg:flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-200" id="chip-class">Class: --</span>
+                    <span class="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-200" id="chip-date">Date: --</span>
+                    <span class="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-200" id="chip-workflow">--</span>
+                </div>
+                <span class="text-xs text-slate-400">Tip: On mobile, use the bottom bar for actions.</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div class="glass rounded-xl p-3 border border-white/5">
                     <p class="text-xs text-slate-400">Present</p>
                     <p class="text-2xl text-white font-medium" id="stat-present">0</p>
                 </div>
                 <div class="glass rounded-xl p-3 border border-white/5">
-                    <p class="text-xs text-slate-400">Late</p>
-                    <p class="text-2xl text-white font-medium" id="stat-late">0</p>
+                    <p class="text-xs text-slate-400">Permission</p>
+                    <p class="text-2xl text-white font-medium" id="stat-permission">0</p>
                 </div>
                 <div class="glass rounded-xl p-3 border border-white/5">
                     <p class="text-xs text-slate-400">Absent</p>
@@ -49,41 +103,79 @@
                 </div>
             </div>
 
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <input id="att-student-search" type="text" placeholder="Search students" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" disabled />
+                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                </div>
+
+                <button id="export-csv" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" disabled>
+                    <i class="fas fa-file-csv text-amber-300"></i><span class="text-sm">Export CSV</span>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
+                <div>
+                    <p class="text-white text-sm font-medium">Edit Mode</p>
+                    <p class="text-slate-400 text-xs">Allowed only for submitted sessions that are not locked.</p>
+                </div>
+                <label class="inline-flex items-center gap-2">
+                    <input id="edit-toggle" type="checkbox" class="h-5 w-5 accent-cyan-300" disabled />
+                    <span class="text-sm text-slate-200">Edit</span>
+                </label>
+            </div>
+
             <div class="glass rounded-2xl border border-white/5 overflow-hidden">
                 <div class="hidden lg:grid grid-cols-12 px-4 py-3 bg-white/5 text-xs text-slate-300">
-                    <span class="col-span-5">Student</span>
-                    <span class="col-span-3">ID</span>
+                    <span class="col-span-6">Student</span>
                     <span class="col-span-2">Status</span>
-                    <span class="col-span-2 text-right">Action</span>
+                    <span class="col-span-4 text-right">Actions</span>
                 </div>
-                <div id="att-roster" class="divide-y divide-white/5 min-h-[200px]">
-                    <p class="text-slate-400 text-sm px-4 py-3">Choose a class and session to load roster.</p>
+                <div id="att-roster" class="divide-y divide-white/5 min-h-[260px] max-h-[56vh] overflow-auto lg:max-h-none lg:overflow-visible">
+                    <p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>
                 </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button id="save-attendance" type="button" class="h-11 px-4 rounded-xl neon-pill text-sm font-medium flex items-center justify-center gap-2" disabled>
+                    <i class="fas fa-floppy-disk"></i><span>Save</span>
+                </button>
+                <button id="refresh-roster" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" disabled>
+                    <i class="fas fa-rotate text-primary"></i><span>Refresh</span>
+                </button>
+            </div>
+
+            <div id="lock-banner" class="hidden glass rounded-xl p-4 border border-white/5">
+                <p class="text-white text-sm font-medium">This attendance is locked</p>
+                <p class="text-slate-400 text-sm mt-1" id="lock-banner-copy">Submitted more than 7 days ago.</p>
             </div>
         </div>
+    </div>
 
-        <div class="glass rounded-2xl p-4 md:p-6 shadow-glow flex flex-col gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Controls</p>
-                <h3 class="text-lg text-white font-medium">Quick actions</h3>
-            </div>
-            <div class="space-y-3 text-sm text-slate-200">
-                <button id="mark-all-present" class="w-full glass rounded-xl px-4 py-3 text-left hover:bg-white/10 transition flex items-center gap-3">
-                    <i class="fas fa-user-check text-neon"></i><span>Mark all present</span>
-                </button>
-                <button id="save-attendance" class="w-full neon-pill rounded-xl px-4 py-3 text-left flex items-center gap-3">
-                    <i class="fas fa-floppy-disk"></i><span>Save updates</span>
-                </button>
-                <button id="refresh-session" class="w-full glass rounded-xl px-4 py-3 text-left hover:bg-white/10 transition flex items-center gap-3">
-                    <i class="fas fa-rotate text-primary"></i><span>Refresh session</span>
-                </button>
-                <button id="export-session" class="w-full glass rounded-xl px-4 py-3 text-left hover:bg-white/10 transition flex items-center gap-3">
-                    <i class="fas fa-file-export text-amber-300"></i><span>Export CSV</span>
-                </button>
-            </div>
-            <div class="glass rounded-xl p-4 border border-white/5">
-                <p class="text-xs text-slate-400 mb-2">Last sync</p>
-                <p class="text-white text-sm" id="last-sync">—</p>
+    <!-- Mobile bottom action bar -->
+    <div id="mobile-actions" class="fixed inset-x-0 bottom-0 z-40 lg:hidden hidden">
+        <div class="mx-auto max-w-3xl px-4 pb-4">
+            <div class="glass rounded-2xl border border-white/10 shadow-glow p-3">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <button id="m-export" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2" disabled>
+                            <i class="fas fa-file-csv text-amber-300"></i><span class="text-sm">CSV</span>
+                        </button>
+                        <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+                            <input id="m-edit" type="checkbox" class="h-5 w-5 accent-cyan-300" disabled />
+                            <span class="text-sm text-slate-200">Edit</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="m-refresh" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2" disabled>
+                            <i class="fas fa-rotate text-primary"></i><span class="text-sm">Refresh</span>
+                        </button>
+                        <button id="m-save" type="button" class="h-11 px-5 rounded-xl neon-pill text-sm font-medium flex items-center gap-2" disabled>
+                            <i class="fas fa-floppy-disk"></i><span>Save</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-2" id="mobile-actions-meta">Select a class and date.</p>
             </div>
         </div>
     </div>
@@ -95,71 +187,168 @@
         classes: [],
         sessions: [],
         roster: [],
+        rosterFiltered: [],
         currentClass: null,
         currentSession: null,
+        dirty: {},
+        locked: false,
+        editableUntil: null,
+        workflowStatus: null,
+        editMode: false,
+        showDrafts: false,
     };
 
     const setSync = () => {
         document.getElementById('last-sync').textContent = new Date().toLocaleString();
     };
 
+    const fmtDate = (d) => {
+        if (!d) return '';
+        const s = String(d);
+        return s.length >= 10 ? s.slice(0, 10) : s;
+    };
+
+    const showLock = (locked, editableUntil) => {
+        const banner = document.getElementById('lock-banner');
+        const copy = document.getElementById('lock-banner-copy');
+        if (!locked) { banner.classList.add('hidden'); return; }
+        banner.classList.remove('hidden');
+        copy.textContent = editableUntil ? `Locked after ${editableUntil}.` : 'Submitted more than 7 days ago.';
+    };
+
     const statusPill = (status) => {
-        const palette = { present: 'text-neon', late: 'text-amber-300', absent: 'text-slate-300' };
-        const copy = status.charAt(0).toUpperCase() + status.slice(1);
-        return `<span class="px-3 py-1 rounded-full bg-white/5 ${palette[status] || ''} text-xs">${copy}</span>`;
+        const palette = { present: 'text-neon', permission: 'text-mint', absent: 'text-slate-300', unmarked: 'text-amber-300' };
+        const copy = (status || 'absent').toString();
+        const label = copy === 'unmarked' ? 'Unmarked' : (copy.charAt(0).toUpperCase() + copy.slice(1));
+        return `<span class="px-3 py-1 rounded-full bg-white/5 ${palette[copy] || ''} text-xs">${label}</span>`;
     };
 
     const computeStats = () => {
-        const total = attState.roster.length;
-        const present = attState.roster.filter(s => s.status === 'present').length;
-        const late = attState.roster.filter(s => s.status === 'late').length;
-        const absent = attState.roster.filter(s => s.status === 'absent').length;
+        const total = attState.rosterFiltered.length;
+        const present = attState.rosterFiltered.filter(s => s.display_status === 'present').length;
+        const permission = attState.rosterFiltered.filter(s => s.display_status === 'permission').length;
+        const absent = attState.rosterFiltered.filter(s => s.display_status === 'absent').length;
         document.getElementById('stat-total').textContent = total;
         document.getElementById('stat-present').textContent = present;
-        document.getElementById('stat-late').textContent = late;
+        document.getElementById('stat-permission').textContent = permission;
         document.getElementById('stat-absent').textContent = absent;
+    };
+
+    const updateEditAvailability = () => {
+        const toggle = document.getElementById('edit-toggle');
+        const canEdit = attState.currentSession
+            && (String(attState.workflowStatus || '').toLowerCase() === 'submitted')
+            && !attState.locked;
+
+        toggle.disabled = !canEdit;
+        if (!canEdit) {
+            toggle.checked = false;
+            attState.editMode = false;
+        }
+
+        document.getElementById('save-attendance').disabled = !attState.editMode || Object.keys(attState.dirty).length === 0;
+    };
+
+    const markDirty = (studentId, status) => {
+        attState.dirty[String(studentId)] = status;
+        document.getElementById('save-attendance').disabled = !attState.editMode || Object.keys(attState.dirty).length === 0;
     };
 
     const renderRoster = () => {
         const wrap = document.getElementById('att-roster');
-        if (!attState.roster.length) {
-            wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No students found for this session.</p>';
+        if (!attState.currentSession) {
+            wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>';
+            attState.rosterFiltered = [];
             computeStats();
             return;
         }
-        wrap.innerHTML = attState.roster.map(student => `
+
+        if (!attState.rosterFiltered.length) {
+            wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No students found.</p>';
+            computeStats();
+            return;
+        }
+
+        wrap.innerHTML = attState.rosterFiltered.map(student => `
             <div class="grid grid-cols-1 lg:grid-cols-12 px-4 py-3 gap-3 items-center">
-                <div class="lg:col-span-5">
+                <div class="lg:col-span-6">
                     <p class="text-white">${student.name}</p>
-                    <p class="text-xs text-slate-400">${student.grade || ''}</p>
+                    <p class="text-xs text-slate-400">ID: ${student.id}</p>
                 </div>
-                <div class="lg:col-span-3 text-slate-200">${student.id || '—'}</div>
-                <div class="lg:col-span-2">${statusPill(student.status)}</div>
-                <div class="lg:col-span-2 flex gap-2 justify-end">
-                    ${['present','late','absent'].map(state => `
-                        <button data-student="${student.id}" data-status="${state}" class="px-3 py-1 rounded-lg bg-white/5 text-xs ${student.status===state?'text-neon':'text-slate-200'} hover:text-white transition">
+                <div class="lg:col-span-2">${statusPill(student.display_status)}</div>
+                <div class="lg:col-span-4 flex flex-wrap gap-2 justify-start lg:justify-end">
+                    ${attState.editMode ? ['present','permission','absent'].map(state => `
+                        <button type="button" data-student="${student.id}" data-status="${state}" class="px-3 py-1 rounded-lg bg-white/5 text-xs ${student.status===state?'text-neon':'text-slate-200'} hover:text-white transition">
                             ${state[0].toUpperCase() + state.slice(1)}
-                        </button>`).join('')}
+                        </button>`).join('') : '<span class="text-xs text-slate-400">View only</span>'}
                 </div>
             </div>
         `).join('');
-        document.querySelectorAll('[data-student][data-status]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sid = btn.getAttribute('data-student');
-                const status = btn.getAttribute('data-status');
-                const target = attState.roster.find(s => String(s.id) === String(sid));
-                if (target) { target.status = status; renderRoster(); computeStats(); markDirty(sid, status); }
+
+        if (attState.editMode) {
+            document.querySelectorAll('[data-student][data-status]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const sid = btn.getAttribute('data-student');
+                    const status = btn.getAttribute('data-status');
+                    const target = attState.roster.find(s => String(s.id) === String(sid));
+                    if (!target) return;
+                    target.status = status;
+                    target.display_status = status;
+                    applyStudentFilter();
+                    markDirty(sid, status);
+                });
             });
-        });
+        }
+
         computeStats();
     };
 
-    const markDirty = (studentId, status) => {
-        if (!attState.dirty) attState.dirty = {};
-        attState.dirty[studentId] = status;
+    const renderSessions = () => {
+        const wrap = document.getElementById('att-session-list');
+        if (!attState.currentClass) {
+            wrap.innerHTML = '<p class="text-slate-400 text-sm">Select a class to load sessions.</p>';
+            return;
+        }
+        if (!attState.sessions.length) {
+            wrap.innerHTML = '<p class="text-slate-400 text-sm">No sessions found for this class in the selected range.</p>';
+            return;
+        }
+        const pill = (s) => {
+            const st = (s.workflow_status || 'draft').toLowerCase();
+            const map = { draft: 'text-amber-300', submitted: 'text-mint' };
+            return `<span class="px-2.5 py-1 rounded-full bg-white/5 text-xs ${map[st] || 'text-slate-300'}">${st.toUpperCase()}</span>`;
+        };
+        wrap.innerHTML = attState.sessions.map(s => `
+            <button type="button" class="w-full text-left glass rounded-xl px-4 py-4 border border-white/5 hover:bg-white/10 transition ${attState.currentSession && String(attState.currentSession.id) === String(s.id) ? 'bg-white/10' : ''}" data-session="${s.id}">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-white">${fmtDate(s.attendance_date) || '--'}</p>
+                        <p class="text-xs text-slate-400">Session #${s.id}</p>
+                    </div>
+                    ${pill(s)}
+                </div>
+            </button>
+        `).join('');
+
+        document.querySelectorAll('[data-session]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-session');
+                const s = attState.sessions.find(x => String(x.id) === String(id));
+                if (s) selectSession(s);
+            });
+        });
+    };
+
+    const applyStudentFilter = () => {
+        const q = (document.getElementById('att-student-search').value || '').toLowerCase().trim();
+        attState.rosterFiltered = attState.roster.filter(s => (s.name || '').toLowerCase().includes(q));
+        renderRoster();
     };
 
     const loadClasses = async () => {
+        const select = document.getElementById('att-class');
+        select.innerHTML = '<option value="">Loading...</option>';
+
         try {
             const res = await fetch('/api/v1/classes');
             const json = await res.json();
@@ -170,110 +359,269 @@
         } catch {
             attState.classes = [];
         }
-        const select = document.getElementById('att-class');
+
         select.innerHTML = '<option value="">Select class</option>' + attState.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     };
 
     const loadSessions = async (classId) => {
-        attState.sessions = [];
-        document.getElementById('att-session').innerHTML = '<option value="">Loading...</option>';
+        document.getElementById('att-session-list').innerHTML = '<p class="text-slate-400 text-sm">Loading sessions...</p>';
+        const from = document.getElementById('att-from').value;
+        const to = document.getElementById('att-to').value;
+        const qs = new URLSearchParams();
+        if (from) qs.set('from', from);
+        if (to) qs.set('to', to);
+        if (!attState.showDrafts) qs.set('workflow_status', 'submitted');
+        const url = `/api/v1/classes/${classId}/sessions` + (qs.toString() ? `?${qs.toString()}` : '');
+
         try {
-            const res = await fetch(`/api/v1/classes/${classId}/sessions`);
+            const res = await fetch(url);
             const json = await res.json();
-            attState.sessions = (json.data || json || []).map(s => ({ id: s.id, date: s.date || s.created_at, status: s.status || 'open' }));
+            const sessions = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+            attState.sessions = sessions.map(s => ({
+                id: s.id,
+                attendance_date: s.attendance_date || null,
+                workflow_status: s.workflow_status || 'draft',
+            }));
         } catch {
             attState.sessions = [];
         }
-        const select = document.getElementById('att-session');
-        if (!attState.sessions.length) {
-            select.innerHTML = '<option value="">No open sessions</option>';
-        } else {
-            select.innerHTML = attState.sessions.map(s => `<option value="${s.id}">Session ${s.id} • ${s.date || ''}</option>`).join('');
-        }
+
+        renderSessions();
+        setSync();
     };
 
     const loadRoster = async (sessionId) => {
-        attState.roster = [];
         document.getElementById('att-roster').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Loading roster...</p>';
+        attState.roster = [];
+        attState.rosterFiltered = [];
+        attState.dirty = {};
+        document.getElementById('save-attendance').disabled = true;
+
         try {
             const res = await fetch(`/api/v1/sessions/${sessionId}/students`);
             const json = await res.json();
-            attState.roster = (json.data || json || []).map(s => ({
-                id: s.id,
-                name: s.full_name || s.name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-                grade: s.current_grade || '',
-                status: s.pivot?.status || s.status || 'present',
-            }));
+            attState.locked = !!json.session?.locked;
+            attState.editableUntil = json.session?.editable_until || null;
+            attState.workflowStatus = json.session?.workflow_status || null;
+            showLock(attState.locked, attState.editableUntil);
+
+            const wf = String(attState.workflowStatus || 'draft').toLowerCase();
+            const rows = json.students || [];
+
+            attState.roster = rows.map(s => {
+                const has = !!s.attendance_status;
+                const status = has ? s.attendance_status : 'absent';
+                const display = has ? s.attendance_status : (wf === 'submitted' ? 'absent' : 'unmarked');
+                return {
+                    id: s.student_id,
+                    name: s.full_name,
+                    status,
+                    display_status: display,
+                };
+            });
+            attState.rosterFiltered = attState.roster;
         } catch {
             attState.roster = [];
+            attState.rosterFiltered = [];
         }
+
+        document.getElementById('att-student-search').disabled = false;
+        document.getElementById('export-csv').disabled = false;
+        document.getElementById('refresh-roster').disabled = false;
+
+        updateEditAvailability();
         renderRoster();
         setSync();
     };
 
-    const startSession = async () => {
-        const classId = attState.currentClass;
-        if (!classId) return alert('Select a class first');
-        try {
-            const res = await fetch(`/api/v1/classes/${classId}/sessions`, { method: 'POST' });
-            if (!res.ok) throw new Error('fail');
-            await loadSessions(classId);
-            const first = attState.sessions[0];
-            if (first) {
-                document.getElementById('att-session').value = first.id;
-                attState.currentSession = first.id;
-                loadRoster(first.id);
+    const selectClass = async (classId) => {
+        const found = attState.classes.find(c => String(c.id) === String(classId));
+        attState.currentClass = found || null;
+
+        attState.currentSession = null;
+        attState.sessions = [];
+        attState.roster = [];
+        attState.rosterFiltered = [];
+        attState.dirty = {};
+        attState.locked = false;
+        attState.editableUntil = null;
+        attState.workflowStatus = null;
+        attState.editMode = false;
+        document.getElementById('edit-toggle').checked = false;
+        showLock(false, null);
+
+        document.getElementById('att-title').textContent = 'Select a session';
+        document.getElementById('att-subtitle').textContent = found ? `Class: ${found.name}` : 'Pick a class and date to view attendance.';
+        document.getElementById('att-roster').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>';
+        computeStats();
+
+        document.getElementById('att-refresh-sessions').disabled = !found;
+
+        if (found) {
+            await loadSessions(found.id);
+            if (attState.sessions.length) {
+                await selectSession(attState.sessions[0]);
             }
-        } catch {
-            alert('Could not start session');
+        } else {
+            document.getElementById('att-session-list').innerHTML = '<p class="text-slate-400 text-sm">Select a class to load sessions.</p>';
+        }
+    };
+
+    const selectSession = async (s) => {
+        attState.currentSession = s;
+        attState.editMode = false;
+        document.getElementById('edit-toggle').checked = false;
+        renderSessions();
+
+        const className = attState.currentClass ? attState.currentClass.name : '';
+        const date = fmtDate(s.attendance_date);
+        const wf = (s.workflow_status || '').toString().toUpperCase();
+
+        document.getElementById('att-title').textContent = className || 'Attendance';
+        document.getElementById('att-subtitle').textContent = `${className} | ${date} | ${wf}`;
+        // Selected chips (desktop helper)
+        document.getElementById('selected-chip').classList.toggle('hidden', !className);
+        document.getElementById('chip-class').textContent = `Class: ${className || '--'}`;
+        document.getElementById('chip-date').textContent = `Date: ${date || '--'}`;
+        document.getElementById('chip-workflow').textContent = wf || '--';
+
+        await loadRoster(s.id);
+
+        // On small screens, show the bottom bar and update hint.
+        const ma = document.getElementById('mobile-actions');
+        ma.classList.remove('hidden');
+        document.getElementById('mobile-actions-meta').textContent = `${className} | ${date}`;
+
+        // Scroll details into view after selecting a session on mobile.
+        if (window.innerWidth < 1024) {
+            setTimeout(() => document.getElementById('att-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
         }
     };
 
     const saveAttendance = async () => {
-        if (!attState.currentSession || !attState.dirty) return;
+        if (!attState.currentSession) return;
+        if (!attState.editMode) return;
+        if (attState.locked) return alert('Attendance is locked (submitted more than 7 days ago)');
         const entries = Object.entries(attState.dirty);
+        if (!entries.length) return;
+
         try {
-            await Promise.all(entries.map(([studentId, status]) => fetch(`/api/v1/sessions/${attState.currentSession}/students/${studentId}`, {
+            const updates = entries.map(([studentId, status]) => ({ student_id: Number(studentId), status }));
+            const res = await fetch(`/api/v1/sessions/${attState.currentSession.id}/students`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            })));
+                body: JSON.stringify({ updates })
+            });
+            if (!res.ok) throw new Error('fail');
             attState.dirty = {};
+            document.getElementById('save-attendance').disabled = true;
             setSync();
         } catch {
             alert('Failed to save some changes');
         }
     };
 
-    const markAllPresent = () => {
-        attState.roster = attState.roster.map(s => ({ ...s, status: 'present' }));
-        attState.dirty = Object.fromEntries(attState.roster.map(s => [s.id, 'present']));
-        renderRoster();
+    const exportCsv = async () => {
+        if (!attState.currentSession) return;
+        try {
+            const res = await fetch(`/api/v1/sessions/${attState.currentSession.id}/export`, { headers: { 'Accept': 'text/csv' } });
+            if (!res.ok) throw new Error('export failed');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const dispo = res.headers.get('Content-Disposition') || '';
+            const m = dispo.match(/filename=\"?([^\";]+)\"?/i);
+            a.download = m ? m[1] : `attendance_session_${attState.currentSession.id}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch {
+            alert('Export failed');
+        }
     };
 
-    // Event wiring
-    document.getElementById('att-class')?.addEventListener('change', (e) => {
-        const id = e.target.value;
-        attState.currentClass = id;
-        attState.currentSession = null;
-        attState.roster = [];
-        renderRoster();
-        if (id) loadSessions(id);
+    document.getElementById('att-student-search')?.addEventListener('input', applyStudentFilter);
+    document.getElementById('att-refresh-classes')?.addEventListener('click', loadClasses);
+    document.getElementById('att-refresh-sessions')?.addEventListener('click', () => attState.currentClass && loadSessions(attState.currentClass.id));
+    document.getElementById('att-from')?.addEventListener('change', () => attState.currentClass && loadSessions(attState.currentClass.id));
+    document.getElementById('att-to')?.addEventListener('change', () => attState.currentClass && loadSessions(attState.currentClass.id));
+    document.getElementById('att-show-drafts')?.addEventListener('change', (e) => {
+        attState.showDrafts = !!e.target.checked;
+        localStorage.setItem('finot_att_show_drafts', attState.showDrafts ? '1' : '0');
+        if (attState.currentClass) loadSessions(attState.currentClass.id);
     });
-
-    document.getElementById('att-session')?.addEventListener('change', (e) => {
-        const id = e.target.value;
-        attState.currentSession = id;
-        if (id) loadRoster(id);
-    });
-
-    document.getElementById('start-session')?.addEventListener('click', startSession);
     document.getElementById('save-attendance')?.addEventListener('click', saveAttendance);
-    document.getElementById('refresh-session')?.addEventListener('click', () => attState.currentSession && loadRoster(attState.currentSession));
-    document.getElementById('export-session')?.addEventListener('click', () => alert('Export coming soon'));
-    document.getElementById('mark-all-present')?.addEventListener('click', markAllPresent);
+    document.getElementById('refresh-roster')?.addEventListener('click', () => attState.currentSession && loadRoster(attState.currentSession.id));
+    document.getElementById('export-csv')?.addEventListener('click', exportCsv);
 
-    // init
-    loadClasses();
+    document.getElementById('edit-toggle')?.addEventListener('change', (e) => {
+        attState.editMode = !!e.target.checked;
+        if (!attState.editMode) {
+            attState.dirty = {};
+            document.getElementById('save-attendance').disabled = true;
+        }
+        renderRoster();
+    });
+
+    document.getElementById('att-class')?.addEventListener('change', (e) => selectClass(e.target.value));
+
+    // Mobile bottom bar: proxy to desktop handlers/state.
+    const syncMobileActions = () => {
+        const hasSession = !!attState.currentSession;
+        document.getElementById('mobile-actions').classList.toggle('hidden', !hasSession);
+        document.getElementById('m-export').disabled = document.getElementById('export-csv').disabled;
+        document.getElementById('m-refresh').disabled = document.getElementById('refresh-roster').disabled;
+        document.getElementById('m-save').disabled = document.getElementById('save-attendance').disabled;
+        document.getElementById('m-edit').disabled = document.getElementById('edit-toggle').disabled;
+        document.getElementById('m-edit').checked = document.getElementById('edit-toggle').checked;
+    };
+
+    document.getElementById('m-export')?.addEventListener('click', () => document.getElementById('export-csv')?.click());
+    document.getElementById('m-refresh')?.addEventListener('click', () => document.getElementById('refresh-roster')?.click());
+    document.getElementById('m-save')?.addEventListener('click', () => document.getElementById('save-attendance')?.click());
+    document.getElementById('m-edit')?.addEventListener('change', (e) => {
+        const t = document.getElementById('edit-toggle');
+        if (!t || t.disabled) return;
+        t.checked = e.target.checked;
+        t.dispatchEvent(new Event('change'));
+    });
+
+    const boot = async () => {
+        attState.showDrafts = (localStorage.getItem('finot_att_show_drafts') === '1');
+        const showDraftsEl = document.getElementById('att-show-drafts');
+        if (showDraftsEl) showDraftsEl.checked = attState.showDrafts;
+
+        const today = new Date().toISOString().slice(0,10);
+        document.getElementById('att-to').value = today;
+        document.getElementById('att-from').value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
+
+        await loadClasses();
+
+        const params = new URLSearchParams(window.location.search);
+        const classId = params.get('class_id');
+        const sessionId = params.get('session_id');
+
+        // If deep-linking to a specific session, include drafts so the session can be found.
+        if (sessionId) {
+            attState.showDrafts = true;
+            if (showDraftsEl) showDraftsEl.checked = true;
+        }
+
+        if (classId) {
+            document.getElementById('att-class').value = classId;
+            await selectClass(classId);
+            if (sessionId) {
+                const ses = attState.sessions.find(s => String(s.id) === String(sessionId));
+                if (ses) await selectSession(ses);
+            }
+        }
+    };
+
+    boot();
+
+    // Keep mobile bar in sync with UI state
+    setInterval(syncMobileActions, 500);
 </script>
 @endpush

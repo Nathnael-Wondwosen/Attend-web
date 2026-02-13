@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\AttTeacherAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -47,5 +48,31 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Logged out']);
+    }
+
+    public function me(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user instanceof Admin) {
+            return response()->json([
+                'type' => 'admin',
+                'id' => $user->id,
+                'username' => $user->username,
+                'role' => $user->role,
+                'full_name' => $user->full_name,
+            ]);
+        }
+
+        if ($user instanceof AttTeacherAccount) {
+            return response()->json([
+                'type' => 'teacher',
+                'id' => $user->id,
+                'teacher_id' => $user->teacher_id,
+                'username' => $user->username,
+            ]);
+        }
+
+        return response()->json(['type' => 'unknown'], 200);
     }
 }

@@ -20,4 +20,19 @@ class AdminController extends Controller
     {
         return view('admin.attendance');
     }
+
+    public function students()
+    {
+        return view('admin.students');
+    }
+
+    public function teacherAccounts()
+    {
+        return view('admin.teacher_accounts');
+    }
+
+    public function reports()
+    {
+        return view('admin.reports');
+    }
 }

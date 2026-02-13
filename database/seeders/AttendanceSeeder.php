@@ -18,6 +18,13 @@ class AttendanceSeeder extends Seeder
 
     public function run(): void
     {
+        // Guardrail: never touch master roster data on production/shared deployments.
+        // This seeder is for local/dev/demo environments only.
+        if (app()->environment('production') || !config('finot.roster.allow_seeding')) {
+            $this->command?->warn('AttendanceSeeder skipped (roster seeding disabled).');
+            return;
+        }
+
         // Create admin user
         Admin::create([
             'username' => 'admin',
@@ -56,7 +63,10 @@ class AttendanceSeeder extends Seeder
                     'class_id' => $class->id,
                     'student_id' => $student->id,
                     'status' => 'active',
-                    'enrolled_at' => now(),
+                    // Live schema uses enrollment_date (date) not enrolled_at.
+                    'enrollment_date' => now()->toDateString(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
