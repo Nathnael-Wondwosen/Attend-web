@@ -126,7 +126,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div class="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
                 <button id="take-save" class="h-11 px-4 rounded-xl neon-pill text-sm font-medium flex items-center justify-center gap-2" disabled>
                     <i class="fas fa-floppy-disk"></i><span>Save</span>
                 </button>
@@ -140,7 +140,7 @@
 
             <div id="take-status" class="hidden glass rounded-xl p-4 border border-white/5 mt-4">
                 <p class="text-white text-sm font-medium" id="take-status-title">Status</p>
-                <p class="text-slate-400 text-sm mt-1" id="take-status-copy">—</p>
+                <p class="text-slate-400 text-sm mt-1" id="take-status-copy">--</p>
             </div>
 
             <div id="lock-banner" class="hidden glass rounded-xl p-4 border border-white/5 mt-4">
@@ -149,6 +149,33 @@
             </div>
         </div>
     </main>
+
+    {{-- Mobile bottom actions bar (fixed) --}}
+    <div class="sm:hidden h-24"></div>
+    <div id="take-mobile-bar" class="sm:hidden fixed left-0 right-0 bottom-0 z-50">
+        <div class="mx-auto max-w-3xl px-3" style="padding-bottom: env(safe-area-inset-bottom);">
+            <div class="glass rounded-2xl border border-white/10 shadow-glow px-2 py-2">
+                <div class="grid grid-cols-4 gap-1">
+                    <button id="take-m-all-present" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-user-check text-neon"></i>
+                        <span class="text-[11px] leading-none">All</span>
+                    </button>
+                    <button id="take-m-save" type="button" class="h-12 rounded-xl neon-pill text-sm font-medium flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-floppy-disk"></i>
+                        <span class="text-[11px] leading-none">Save</span>
+                    </button>
+                    <button id="take-m-submit" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-paper-plane text-mint"></i>
+                        <span class="text-[11px] leading-none">Submit</span>
+                    </button>
+                    <button id="take-m-refresh" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-rotate text-primary"></i>
+                        <span class="text-[11px] leading-none">Refresh</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         const take = {
@@ -165,6 +192,20 @@
 
         const el = (id) => document.getElementById(id);
         const setError = (m) => { el('take-error').textContent = m || ''; };
+        const syncMobileBar = () => {
+            const map = [
+                ['take-m-all-present', 'take-all-present'],
+                ['take-m-save', 'take-save'],
+                ['take-m-submit', 'take-submit'],
+                ['take-m-refresh', 'take-refresh'],
+            ];
+            map.forEach(([m, d]) => {
+                const mb = el(m);
+                const db = el(d);
+                if (!mb || !db) return;
+                mb.disabled = !!db.disabled;
+            });
+        };
         const setStatusBox = (title, copy) => {
             const box = el('take-status');
             if (!title && !copy) {
@@ -174,6 +215,7 @@
             el('take-status-title').textContent = title || 'Status';
             el('take-status-copy').textContent = copy || '';
             box.classList.remove('hidden');
+            syncMobileBar();
         };
         const setBusy = (busy, which) => {
             const setBtn = (id, on, label, icon) => {
@@ -185,9 +227,9 @@
                     ? `<i class="fas fa-circle-notch fa-spin"></i><span>${label}</span>`
                     : b.dataset.orig;
             };
-            if (which === 'save') setBtn('take-save', busy, 'Saving...', 'fa-floppy-disk');
-            if (which === 'submit') setBtn('take-submit', busy, 'Submitting...', 'fa-paper-plane');
-            if (which === 'refresh') setBtn('take-refresh', busy, 'Refreshing...', 'fa-rotate');
+            if (which === 'save') { setBtn('take-save', busy, 'Saving...', 'fa-floppy-disk'); setBtn('take-m-save', busy, 'Saving...', 'fa-floppy-disk'); }
+            if (which === 'submit') { setBtn('take-submit', busy, 'Submitting...', 'fa-paper-plane'); setBtn('take-m-submit', busy, 'Submitting...', 'fa-paper-plane'); }
+            if (which === 'refresh') { setBtn('take-refresh', busy, 'Refreshing...', 'fa-rotate'); setBtn('take-m-refresh', busy, 'Refreshing...', 'fa-rotate'); }
             if (busy) {
                 el('take-open').disabled = true;
                 el('take-all-present').disabled = true;
@@ -195,6 +237,7 @@
                 el('take-open').disabled = !take.mode || !el('take-class').value || !el('take-date').value;
                 el('take-all-present').disabled = !take.currentSessionId || take.locked;
             }
+            syncMobileBar();
         };
 
         const setModeBadge = () => {
@@ -241,11 +284,13 @@
                 wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Open a class and date.</p>';
                 take.filtered = [];
                 computeStats();
+                syncMobileBar();
                 return;
             }
             if (!take.filtered.length) {
                 wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No students found.</p>';
                 computeStats();
+                syncMobileBar();
                 return;
             }
             const disabled = take.locked ? 'disabled' : '';
@@ -277,10 +322,12 @@
                     applyFilter();
                     take.dirty[String(sid)] = status;
                     el('take-save').disabled = Object.keys(take.dirty).length === 0;
+                    syncMobileBar();
                 });
             });
 
             computeStats();
+            syncMobileBar();
         };
 
         const applyFilter = () => {
@@ -293,6 +340,7 @@
             el('take-class').disabled = !on;
             el('take-date').disabled = !on;
             el('take-open').disabled = !on;
+            syncMobileBar();
         };
 
         const setRosterEnabled = (on) => {
@@ -301,6 +349,7 @@
             el('take-save').disabled = !on;
             el('take-submit').disabled = !on;
             el('take-refresh').disabled = !on;
+            syncMobileBar();
         };
 
         const loadClasses = async () => {
@@ -382,6 +431,7 @@
             el('take-all-present').disabled = take.locked;
             applyFilter();
             setStatusBox('Ready', take.locked ? 'Attendance is locked.' : 'Mark students, then Save and Submit.');
+            syncMobileBar();
         };
 
         const save = async () => {
@@ -406,6 +456,7 @@
                 setStatusBox('Saved', `Saved at ${new Date().toLocaleTimeString()}.`);
             } finally {
                 setBusy(false, 'save');
+                syncMobileBar();
             }
         };
 
@@ -447,6 +498,7 @@
                 setStatusBox('Submitted', 'Attendance submitted. Change date (or class) and press Open to start a new attendance.');
             } finally {
                 setBusy(false, 'submit');
+                syncMobileBar();
             }
         };
 
@@ -457,6 +509,7 @@
             el('take-save').disabled = false;
             applyFilter();
             setStatusBox('Updated', 'All students set to Present. Press Save.');
+            syncMobileBar();
         };
 
         const useTeacherLogin = async (token) => {
@@ -486,11 +539,19 @@
         el('take-all-present').addEventListener('click', allPresent);
         el('take-search').addEventListener('input', applyFilter);
 
+        // Mobile bar wiring (mirror main actions).
+        el('take-m-all-present')?.addEventListener('click', () => el('take-all-present')?.click());
+        el('take-m-save')?.addEventListener('click', () => el('take-save')?.click());
+        el('take-m-submit')?.addEventListener('click', () => el('take-submit')?.click());
+        el('take-m-refresh')?.addEventListener('click', () => el('take-refresh')?.click());
+        syncMobileBar();
+
         // Require teacher login.
         (async () => {
             if (teacherExisting) {
                 try {
                     await useTeacherLogin(teacherExisting);
+                    syncMobileBar();
                     return;
                 } catch {
                     localStorage.removeItem(teacherTokenKey);

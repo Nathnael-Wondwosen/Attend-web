@@ -32,12 +32,15 @@
         const token = localStorage.getItem('finot_token');
         if (!token) { window.location.href = '/login'; }
         if (!window.tokenValidated) {
-            fetch('/api/v1/classes', { headers: {'Authorization': `Bearer ${token}`} }).then(res => {
+            // Force JSON response so auth failures don't redirect to HTML login (which breaks fetch().json()).
+            fetch('/api/v1/me', { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }).then(async res => {
                 if (res.status === 401) {
                     localStorage.removeItem('finot_token');
                     localStorage.removeItem('finot_user');
                     window.location.href = '/login';
-                } else { window.tokenValidated = true; }
+                    return;
+                }
+                window.tokenValidated = res.ok;
             }).catch(() => {
                 localStorage.removeItem('finot_token');
                 localStorage.removeItem('finot_user');
@@ -47,7 +50,13 @@
         const originalFetch = window.fetch;
         window.fetch = function(url, options = {}) {
             const auth = localStorage.getItem('finot_token');
-            if (auth) { options.headers = {...options.headers, Authorization: `Bearer ${auth}`}; }
+            const headers = new Headers(options.headers || {});
+            if (auth) headers.set('Authorization', `Bearer ${auth}`);
+            const u = String(url || '');
+            if ((u.startsWith('/api/') || u.includes('/api/')) && !headers.has('Accept')) {
+                headers.set('Accept', 'application/json');
+            }
+            options.headers = headers;
             return originalFetch(url, options);
         };
     </script>
@@ -91,6 +100,23 @@
         .theme-light select { color-scheme: light; }
         .theme-light select option, .theme-light select optgroup { background-color: #ffffff; color: #0f172a; }
         .theme-light input[type="date"] { color-scheme: light; }
+        /* Sidebar needs to be readable (less transparent than generic glass). */
+        .sidebar {
+            background-color: rgba(9, 12, 24, 0.92);
+            backdrop-filter: blur(18px);
+        }
+        .sidebar.glass {
+            background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+            border-color: rgba(255,255,255,0.08);
+        }
+        .theme-light .sidebar {
+            background-color: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+        }
+        .theme-light .sidebar.glass {
+            background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.98));
+            border-color: rgba(15,23,42,0.08);
+        }
         /* Sidebar collapse */
         .sidebar-collapsed #sidebar { width: 5rem; }
         .sidebar-collapsed #sidebar .nav-label,
@@ -103,15 +129,18 @@
 <body class="min-h-screen">
     <div class="holo-bg"></div>
     <div class="relative z-10 flex h-screen" id="layout-shell">
-        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/40 hidden lg:hidden"></div>
-        <aside id="sidebar" class="sidebar glass shadow-glow border-r border-white/5 flex flex-col fixed lg:relative h-full w-72 lg:w-72 -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out">
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-black/40 hidden lg:hidden z-[60]"></div>
+        <aside id="sidebar" class="sidebar glass shadow-glow border-r border-white/5 flex flex-col fixed lg:relative h-full w-72 lg:w-72 -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out z-[70]">
             <div class="p-6 flex items-center gap-3">
                 <div class="h-12 w-12 rounded-2xl neon-pill flex items-center justify-center text-xl">F</div>
                 <div class="brand-text">
                     <!-- <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Finot</p> -->
                     <p class="text-xl text-white font-medium">Finot</p>
                 </div>
-                <button id="collapse-toggle" class="ml-auto h-10 w-10 rounded-lg glass flex items-center justify-center text-slate-300 hover:text-white transition shadow-ring">
+                <button id="sidebar-close" type="button" class="ml-auto h-10 w-10 rounded-lg glass flex items-center justify-center text-slate-300 hover:text-white transition shadow-ring lg:hidden" aria-label="Close menu">
+                    <i class="fas fa-xmark"></i>
+                </button>
+                <button id="collapse-toggle" type="button" class="ml-auto h-10 w-10 rounded-lg glass hidden lg:flex items-center justify-center text-slate-300 hover:text-white transition shadow-ring" aria-label="Collapse sidebar">
                     <i class="fas fa-angles-left"></i>
                 </button>
             </div>
@@ -151,33 +180,29 @@
             </div>
         </aside>
 
-        <main class="flex-1 overflow-auto">
-            <header class="px-4 md:px-8 py-5 flex items-center justify-between gap-3">
-                <div>
-                    <p class="text-xs uppercase tracking-[0.35em] text-slate-400">@yield('page-label', 'Live analytics')</p>
-                    <h2 class="text-2xl md:text-3xl text-white font-medium">@yield('page-title', 'Dashboard')</h2>
-                    <p class="text-slate-400 text-sm mt-1">@yield('page-subtitle', '')</p>
+        <main class="flex-1 overflow-y-auto overflow-x-hidden">
+            <header class="px-4 md:px-8 py-5 flex items-start sm:items-center justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs uppercase tracking-[0.35em] text-slate-400 truncate sm:whitespace-normal">@yield('page-label', 'Live analytics')</p>
+                    <h2 class="text-2xl md:text-3xl text-white font-medium leading-tight break-words">@yield('page-title', 'Dashboard')</h2>
+                    <p class="text-slate-400 text-sm mt-1 truncate sm:whitespace-normal">@yield('page-subtitle', '')</p>
                 </div>
-                <div class="flex items-center gap-3 md:gap-4">
-                    <button id="mobile-menu-btn" class="h-11 w-11 rounded-xl glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring lg:hidden">
+                <div class="flex items-center gap-2 md:gap-4 shrink-0">
+                    <button id="mobile-menu-btn" type="button" class="h-11 w-11 rounded-xl glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring lg:hidden" aria-label="Open menu">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <button class="relative h-11 w-11 rounded-xl glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring">
+                    <button class="relative h-11 w-11 rounded-xl glass items-center justify-center text-slate-200 hover:text-white transition shadow-ring hidden sm:flex" aria-label="Notifications">
                         <i class="fas fa-bell"></i>
                         <span class="absolute -top-1 -right-1 h-5 w-5 text-xs bg-gradient-to-r from-amber-400 to-pink-500 text-black rounded-full flex items-center justify-center">3</span>
                     </button>
-                    <button id="theme-toggle" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
+                    <button id="theme-toggle" type="button" class="h-11 w-11 sm:w-auto px-0 sm:px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" aria-label="Toggle theme">
                         <i class="fas fa-moon" id="theme-icon"></i>
-                        <span class="text-sm">Theme</span>
+                        <span class="hidden sm:inline text-sm">Theme</span>
                     </button>
-                    <div class="flex items-center gap-3 glass rounded-xl px-3 py-2 shadow-ring">
-                        <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-primary via-neon to-mint flex items-center justify-center text-midnight font-medium">A</div>
-                        <div class="leading-tight">
-                            <p class="text-slate-300 text-xs">Administrator</p>
-                            <p class="text-white font-medium">Admin User</p>
-                        </div>
-                        <button id="logout-btn" class="ml-3 px-4 py-2 rounded-lg neon-pill text-sm font-medium">Logout</button>
-                    </div>
+                    <button id="logout-btn" type="button" class="h-11 w-11 sm:w-auto px-0 sm:px-4 rounded-xl neon-pill text-sm font-medium flex items-center justify-center gap-2" aria-label="Logout">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span class="hidden sm:inline">Logout</span>
+                    </button>
                 </div>
             </header>
             <section class="px-4 md:px-8 pb-10 space-y-8">
@@ -219,14 +244,29 @@
         const openSidebarMobile = () => {
             sidebar.classList.remove('-translate-x-full');
             backdrop.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
         };
         const closeSidebarMobile = () => {
             sidebar.classList.add('-translate-x-full');
             backdrop.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         };
 
         mobileBtn?.addEventListener('click', openSidebarMobile);
         backdrop?.addEventListener('click', closeSidebarMobile);
+        document.getElementById('sidebar-close')?.addEventListener('click', closeSidebarMobile);
+
+        // Close sidebar when selecting a nav item on mobile.
+        document.querySelectorAll('#sidebar a[href]').forEach(a => {
+            a.addEventListener('click', () => {
+                if (window.innerWidth < 1024) closeSidebarMobile();
+            });
+        });
+
+        // Escape to close on mobile.
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && window.innerWidth < 1024) closeSidebarMobile();
+        });
 
         collapseBtn?.addEventListener('click', () => {
             const collapsed = root.classList.toggle('sidebar-collapsed');

@@ -33,7 +33,7 @@
         <input id="password" type="password" placeholder="********">
         <button id="login-btn">
             <span id="login-text">Login</span>
-            <span id="login-spinner" style="display: none;">Logging in...</span>
+            <span id="login-spinner" style="display:none;">Logging in...</span>
         </button>
         <div class="muted" id="hint">Choose Admin or Teacher.</div>
         <div class="error" id="error"></div>
@@ -74,7 +74,7 @@
         // Auto-redirect if already logged in
         const adminToken = localStorage.getItem(adminTokenKey);
         if (adminToken) {
-            fetch('/api/v1/classes', { headers: {'Authorization': `Bearer ${adminToken}`} })
+            fetch('/api/v1/classes', { headers: { 'Authorization': `Bearer ${adminToken}` } })
                 .then(res => {
                     if (res.ok) window.location.href = '/admin';
                     else { localStorage.removeItem(adminTokenKey); localStorage.removeItem(adminUserKey); }
@@ -84,7 +84,7 @@
 
         const teacherToken = localStorage.getItem(teacherTokenKey);
         if (teacherToken) {
-            fetch('/api/v1/me', { headers: {'Authorization': `Bearer ${teacherToken}`} })
+            fetch('/api/v1/me', { headers: { 'Authorization': `Bearer ${teacherToken}` } })
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(j => {
                     if (j.type === 'teacher') window.location.href = '/takeattendance';
@@ -95,7 +95,7 @@
 
         btn.addEventListener('click', () => {
             err.textContent = '';
-            
+
             // Show loading state
             document.getElementById('login-text').style.display = 'none';
             document.getElementById('login-spinner').style.display = 'inline';
@@ -107,7 +107,7 @@
 
             fetch(endpoint, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             }).then(async res => {
                 const json = await res.json().catch(() => null);
@@ -132,3 +132,4 @@
     </script>
 </body>
 </html>
+

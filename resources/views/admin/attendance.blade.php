@@ -100,36 +100,28 @@
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-3">
+            <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <div class="relative flex-1">
-                    <input id="att-student-search" type="text" placeholder="Search students" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" disabled />
+                    <input id="att-student-search" type="text" placeholder="Search students" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" disabled />
                     <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 </div>
 
-                <button id="export-csv" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" disabled>
-                    <i class="fas fa-file-csv text-amber-300"></i><span class="text-sm">Export CSV</span>
-                </button>
-            </div>
+                <div class="flex items-center gap-2 sm:justify-end">
+                    <button id="export-csv" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" disabled>
+                        <i class="fas fa-file-csv text-amber-300"></i><span class="hidden sm:inline text-sm">CSV</span>
+                    </button>
 
-            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
-                <div>
-                    <p class="text-white text-sm font-medium">Delete Attendance</p>
-                    <p class="text-slate-400 text-xs">Removes this session and all its marks (admin only).</p>
-                </div>
-                <button id="delete-session" type="button" class="h-11 px-4 rounded-xl glass text-red-200 hover:text-white transition shadow-ring flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
-                    <i class="fas fa-trash"></i><span class="text-sm">Delete</span>
-                </button>
-            </div>
+                    <label class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring inline-flex items-center gap-2 select-none disabled:opacity-40 disabled:cursor-not-allowed"
+                           id="edit-wrap">
+                        <input id="edit-toggle" type="checkbox" class="h-5 w-5 accent-cyan-300" disabled />
+                        <span class="hidden sm:inline text-sm">Edit</span>
+                        <i class="fas fa-pen-to-square sm:hidden"></i>
+                    </label>
 
-            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
-                <div>
-                    <p class="text-white text-sm font-medium">Edit Mode</p>
-                    <p class="text-slate-400 text-xs">Allowed only for submitted sessions that are not locked.</p>
+                    <button id="delete-session" type="button" class="h-11 px-4 rounded-xl glass text-red-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-trash"></i><span class="hidden sm:inline text-sm">Delete</span>
+                    </button>
                 </div>
-                <label class="inline-flex items-center gap-2">
-                    <input id="edit-toggle" type="checkbox" class="h-5 w-5 accent-cyan-300" disabled />
-                    <span class="text-sm text-slate-200">Edit</span>
-                </label>
             </div>
 
             <div class="glass rounded-2xl border border-white/5 overflow-hidden">
@@ -143,7 +135,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="hidden lg:grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button id="save-attendance" type="button" class="h-11 px-4 rounded-xl neon-pill text-sm font-medium flex items-center justify-center gap-2" disabled>
                     <i class="fas fa-floppy-disk"></i><span>Save</span>
                 </button>
@@ -159,33 +151,37 @@
         </div>
     </div>
 
-    <!-- Mobile bottom action bar -->
-    <div id="mobile-actions" class="fixed inset-x-0 bottom-0 z-40 lg:hidden hidden">
-        <div class="mx-auto max-w-3xl px-4 pb-4">
-            <div class="glass rounded-2xl border border-white/10 shadow-glow p-3">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                        <button id="m-export" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2" disabled>
-                            <i class="fas fa-file-csv text-amber-300"></i><span class="text-sm">CSV</span>
-                        </button>
-                        <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                            <input id="m-edit" type="checkbox" class="h-5 w-5 accent-cyan-300" disabled />
-                            <span class="text-sm text-slate-200">Edit</span>
-                        </label>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="m-refresh" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2" disabled>
-                            <i class="fas fa-rotate text-primary"></i><span class="text-sm">Refresh</span>
-                        </button>
-                        <button id="m-save" type="button" class="h-11 px-5 rounded-xl neon-pill text-sm font-medium flex items-center gap-2" disabled>
-                            <i class="fas fa-floppy-disk"></i><span>Save</span>
-                        </button>
-                    </div>
+    {{-- Mobile bottom actions bar (fixed) --}}
+    <div class="lg:hidden h-24"></div>
+    <div id="att-mobile-bar" class="lg:hidden fixed left-0 right-0 bottom-0 z-50">
+        <div class="mx-auto max-w-3xl px-3" style="padding-bottom: env(safe-area-inset-bottom);">
+            <div class="glass rounded-2xl border border-white/10 shadow-glow px-2 py-2">
+                <div class="grid grid-cols-5 gap-1">
+                    <button id="m-att-csv" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-file-csv text-amber-300"></i>
+                        <span class="text-[11px] leading-none">CSV</span>
+                    </button>
+                    <button id="m-att-edit" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-pen-to-square"></i>
+                        <span class="text-[11px] leading-none">Edit</span>
+                    </button>
+                    <button id="m-att-save" type="button" class="h-12 rounded-xl neon-pill text-sm font-medium flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-floppy-disk"></i>
+                        <span class="text-[11px] leading-none">Save</span>
+                    </button>
+                    <button id="m-att-refresh" type="button" class="h-12 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-rotate text-primary"></i>
+                        <span class="text-[11px] leading-none">Refresh</span>
+                    </button>
+                    <button id="m-att-delete" type="button" class="h-12 rounded-xl glass text-red-200 hover:text-white transition shadow-ring flex flex-col items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-trash"></i>
+                        <span class="text-[11px] leading-none">Delete</span>
+                    </button>
                 </div>
-                <p class="text-xs text-slate-400 mt-2" id="mobile-actions-meta">Select a class and date.</p>
             </div>
         </div>
     </div>
+
 @endsection
 
 @push('scripts')
@@ -253,11 +249,39 @@
         }
 
         document.getElementById('save-attendance').disabled = !attState.editMode || Object.keys(attState.dirty).length === 0;
+        syncMobileBar();
     };
 
     const markDirty = (studentId, status) => {
         attState.dirty[String(studentId)] = status;
         document.getElementById('save-attendance').disabled = !attState.editMode || Object.keys(attState.dirty).length === 0;
+        syncMobileBar();
+    };
+
+    const syncMobileBar = () => {
+        const byId = (id) => document.getElementById(id);
+        const csv = byId('export-csv');
+        const edit = byId('edit-toggle');
+        const save = byId('save-attendance');
+        const refresh = byId('refresh-roster');
+        const del = byId('delete-session');
+
+        const mCsv = byId('m-att-csv');
+        const mEdit = byId('m-att-edit');
+        const mSave = byId('m-att-save');
+        const mRefresh = byId('m-att-refresh');
+        const mDelete = byId('m-att-delete');
+
+        if (!mCsv || !csv) return;
+
+        mCsv.disabled = !!csv.disabled;
+        mSave.disabled = !!save.disabled;
+        mRefresh.disabled = !!refresh.disabled;
+        mDelete.disabled = !!del.disabled;
+
+        mEdit.disabled = !!edit.disabled;
+        mEdit.classList.toggle('ring-2', !!edit.checked);
+        mEdit.classList.toggle('ring-neon/60', !!edit.checked);
     };
 
     const renderRoster = () => {
@@ -266,12 +290,14 @@
             wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>';
             attState.rosterFiltered = [];
             computeStats();
+            syncMobileBar();
             return;
         }
 
         if (!attState.rosterFiltered.length) {
             wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No students found.</p>';
             computeStats();
+            syncMobileBar();
             return;
         }
 
@@ -307,6 +333,7 @@
         }
 
         computeStats();
+        syncMobileBar();
     };
 
     const renderSessions = () => {
@@ -395,6 +422,7 @@
 
         renderSessions();
         setSync();
+        syncMobileBar();
     };
 
     const loadRoster = async (sessionId) => {
@@ -440,6 +468,7 @@
         updateEditAvailability();
         renderRoster();
         setSync();
+        syncMobileBar();
     };
 
     const selectClass = async (classId) => {
@@ -465,6 +494,7 @@
 
         document.getElementById('att-refresh-sessions').disabled = !found;
         document.getElementById('delete-session').disabled = true;
+        syncMobileBar();
 
         if (found) {
             await loadSessions(found.id);
@@ -474,6 +504,7 @@
         } else {
             document.getElementById('att-session-list').innerHTML = '<p class="text-slate-400 text-sm">Select a class to load sessions.</p>';
         }
+        syncMobileBar();
     };
 
     const selectSession = async (s) => {
@@ -495,11 +526,7 @@
         document.getElementById('chip-workflow').textContent = wf || '--';
 
         await loadRoster(s.id);
-
-        // On small screens, show the bottom bar and update hint.
-        const ma = document.getElementById('mobile-actions');
-        ma.classList.remove('hidden');
-        document.getElementById('mobile-actions-meta').textContent = `${className} | ${date}`;
+        syncMobileBar();
 
         // Scroll details into view after selecting a session on mobile.
         if (window.innerWidth < 1024) {
@@ -525,6 +552,7 @@
             attState.dirty = {};
             document.getElementById('save-attendance').disabled = true;
             setSync();
+            syncMobileBar();
         } catch {
             alert('Failed to save some changes');
         }
@@ -580,6 +608,7 @@
             showLock(false, null);
             document.getElementById('att-roster').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>';
             computeStats();
+            syncMobileBar();
 
             await loadSessions(attState.currentClass.id);
         } catch (e) {
@@ -604,30 +633,11 @@
             document.getElementById('save-attendance').disabled = true;
         }
         renderRoster();
+        syncMobileBar();
     });
 
     document.getElementById('att-class')?.addEventListener('change', (e) => selectClass(e.target.value));
 
-    // Mobile bottom bar: proxy to desktop handlers/state.
-    const syncMobileActions = () => {
-        const hasSession = !!attState.currentSession;
-        document.getElementById('mobile-actions').classList.toggle('hidden', !hasSession);
-        document.getElementById('m-export').disabled = document.getElementById('export-csv').disabled;
-        document.getElementById('m-refresh').disabled = document.getElementById('refresh-roster').disabled;
-        document.getElementById('m-save').disabled = document.getElementById('save-attendance').disabled;
-        document.getElementById('m-edit').disabled = document.getElementById('edit-toggle').disabled;
-        document.getElementById('m-edit').checked = document.getElementById('edit-toggle').checked;
-    };
-
-    document.getElementById('m-export')?.addEventListener('click', () => document.getElementById('export-csv')?.click());
-    document.getElementById('m-refresh')?.addEventListener('click', () => document.getElementById('refresh-roster')?.click());
-    document.getElementById('m-save')?.addEventListener('click', () => document.getElementById('save-attendance')?.click());
-    document.getElementById('m-edit')?.addEventListener('change', (e) => {
-        const t = document.getElementById('edit-toggle');
-        if (!t || t.disabled) return;
-        t.checked = e.target.checked;
-        t.dispatchEvent(new Event('change'));
-    });
 
     const boot = async () => {
         const today = new Date().toISOString().slice(0,10);
@@ -648,11 +658,22 @@
                 if (ses) await selectSession(ses);
             }
         }
+
+        // Mobile bar wiring (mirror desktop controls).
+        document.getElementById('m-att-csv')?.addEventListener('click', () => document.getElementById('export-csv')?.click());
+        document.getElementById('m-att-save')?.addEventListener('click', () => document.getElementById('save-attendance')?.click());
+        document.getElementById('m-att-refresh')?.addEventListener('click', () => document.getElementById('refresh-roster')?.click());
+        document.getElementById('m-att-delete')?.addEventListener('click', () => document.getElementById('delete-session')?.click());
+        document.getElementById('m-att-edit')?.addEventListener('click', () => {
+            const t = document.getElementById('edit-toggle');
+            if (!t || t.disabled) return;
+            t.checked = !t.checked;
+            t.dispatchEvent(new Event('change'));
+        });
+
+        syncMobileBar();
     };
 
     boot();
-
-    // Keep mobile bar in sync with UI state
-    setInterval(syncMobileActions, 500);
 </script>
 @endpush

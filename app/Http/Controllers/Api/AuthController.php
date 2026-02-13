@@ -19,13 +19,38 @@ class AuthController extends Controller
             'device_name' => ['nullable', 'string'],
         ]);
 
-        $admin = Admin::where('username', $data['username'])
+        // Admins login by email (teachers have separate username-based login).
+        $ident = (string) $data['username'];
+        $isEmail = str_contains($ident, '@');
+        $admin = Admin::query()
             ->where('status', 'active')
+            ->when($isEmail, fn ($q) => $q->where('email', $ident))
+            ->when(!$isEmail, fn ($q) => $q->where('username', $ident))
             ->first();
 
-        if (!$admin || !Hash::check($data['password'], $admin->getAuthPassword())) {
+        $ok = false;
+        if ($admin) {
+            $stored = (string) $admin->getAuthPassword();
+            // Prefer modern hashing (bcrypt/argon) but support legacy hashes if the mother system uses them.
+            $ok = Hash::check($data['password'], $stored);
+            if (!$ok) {
+                if (preg_match('/^[a-f0-9]{32}$/i', $stored)) {
+                    $ok = hash_equals(strtolower($stored), md5($data['password']));
+                } elseif (preg_match('/^[a-f0-9]{40}$/i', $stored)) {
+                    $ok = hash_equals(strtolower($stored), sha1($data['password']));
+                }
+            }
+        }
+
+        if (!$admin) {
             throw ValidationException::withMessages([
-                'username' => ['The provided credentials are incorrect.'],
+                'username' => [$isEmail ? 'No active admin account found for this email.' : 'No active admin account found.'],
+            ]);
+        }
+
+        if (!$ok) {
+            throw ValidationException::withMessages([
+                'password' => ['Incorrect password.'],
             ]);
         }
 
