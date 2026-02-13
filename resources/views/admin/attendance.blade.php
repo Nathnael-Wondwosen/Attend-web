@@ -5,6 +5,14 @@
 @section('page-title', 'Attendance')
 @section('page-subtitle', 'Select a class, then pick a date to view or edit attendance.')
 
+@push('head')
+<style>
+    /* Horizontal mobile scroller without visible scrollbar */
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+@endpush
+
 @section('content')
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
         <div class="lg:col-span-4 glass rounded-2xl p-4 md:p-6 shadow-glow space-y-4">
@@ -36,17 +44,6 @@
                 </div>
             </div>
 
-            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
-                <div>
-                    <p class="text-white text-sm font-medium">Show drafts</p>
-                    <p class="text-slate-400 text-xs">Off by default (admins mostly need submitted).</p>
-                </div>
-                <label class="inline-flex items-center gap-2">
-                    <input id="att-show-drafts" type="checkbox" class="h-5 w-5 accent-cyan-300" />
-                    <span class="text-sm text-slate-200">Drafts</span>
-                </label>
-            </div>
-
             <div class="flex items-center justify-between gap-3">
                 <div>
                     <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Step 2</p>
@@ -57,7 +54,7 @@
                 </button>
             </div>
 
-            <div id="att-session-list" class="space-y-2 min-h-[320px]">
+            <div id="att-session-list" class="flex gap-2 overflow-x-auto no-scrollbar py-1 lg:block lg:space-y-2 lg:overflow-visible lg:py-0 min-h-[96px] lg:min-h-[320px]">
                 <p class="text-slate-400 text-sm">Select a class to load sessions.</p>
             </div>
         </div>
@@ -111,6 +108,16 @@
 
                 <button id="export-csv" type="button" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2" disabled>
                     <i class="fas fa-file-csv text-amber-300"></i><span class="text-sm">Export CSV</span>
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 glass rounded-xl p-3 border border-white/5">
+                <div>
+                    <p class="text-white text-sm font-medium">Delete Attendance</p>
+                    <p class="text-slate-400 text-xs">Removes this session and all its marks (admin only).</p>
+                </div>
+                <button id="delete-session" type="button" class="h-11 px-4 rounded-xl glass text-red-200 hover:text-white transition shadow-ring flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-trash"></i><span class="text-sm">Delete</span>
                 </button>
             </div>
 
@@ -195,7 +202,6 @@
         editableUntil: null,
         workflowStatus: null,
         editMode: false,
-        showDrafts: false,
     };
 
     const setSync = () => {
@@ -319,7 +325,7 @@
             return `<span class="px-2.5 py-1 rounded-full bg-white/5 text-xs ${map[st] || 'text-slate-300'}">${st.toUpperCase()}</span>`;
         };
         wrap.innerHTML = attState.sessions.map(s => `
-            <button type="button" class="w-full text-left glass rounded-xl px-4 py-4 border border-white/5 hover:bg-white/10 transition ${attState.currentSession && String(attState.currentSession.id) === String(s.id) ? 'bg-white/10' : ''}" data-session="${s.id}">
+            <button type="button" class="shrink-0 w-64 lg:w-full text-left glass rounded-xl px-4 py-4 border border-white/5 hover:bg-white/10 transition ${attState.currentSession && String(attState.currentSession.id) === String(s.id) ? 'bg-white/10' : ''}" data-session="${s.id}">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-white">${fmtDate(s.attendance_date) || '--'}</p>
@@ -370,7 +376,8 @@
         const qs = new URLSearchParams();
         if (from) qs.set('from', from);
         if (to) qs.set('to', to);
-        if (!attState.showDrafts) qs.set('workflow_status', 'submitted');
+        // Admin view: submitted only.
+        qs.set('workflow_status', 'submitted');
         const url = `/api/v1/classes/${classId}/sessions` + (qs.toString() ? `?${qs.toString()}` : '');
 
         try {
@@ -428,6 +435,7 @@
         document.getElementById('att-student-search').disabled = false;
         document.getElementById('export-csv').disabled = false;
         document.getElementById('refresh-roster').disabled = false;
+        document.getElementById('delete-session').disabled = false;
 
         updateEditAvailability();
         renderRoster();
@@ -456,6 +464,7 @@
         computeStats();
 
         document.getElementById('att-refresh-sessions').disabled = !found;
+        document.getElementById('delete-session').disabled = true;
 
         if (found) {
             await loadSessions(found.id);
@@ -542,19 +551,51 @@
         }
     };
 
+    const deleteSession = async () => {
+        if (!attState.currentSession || !attState.currentClass) return;
+        const className = attState.currentClass.name || 'Class';
+        const date = fmtDate(attState.currentSession.attendance_date) || '--';
+        if (!confirm(`Delete attendance for ${className} on ${date}?\n\nThis will delete the session and all student marks.`)) return;
+
+        try {
+            const res = await fetch(`/api/v1/sessions/${attState.currentSession.id}`, { method: 'DELETE' });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.message || 'Delete failed');
+
+            // Clear current view then reload sessions.
+            attState.currentSession = null;
+            attState.roster = [];
+            attState.rosterFiltered = [];
+            attState.dirty = {};
+            document.getElementById('att-title').textContent = 'Select a session';
+            document.getElementById('att-subtitle').textContent = 'Pick a class and date to view attendance.';
+            document.getElementById('att-student-search').value = '';
+            document.getElementById('att-student-search').disabled = true;
+            document.getElementById('export-csv').disabled = true;
+            document.getElementById('refresh-roster').disabled = true;
+            document.getElementById('delete-session').disabled = true;
+            document.getElementById('edit-toggle').checked = false;
+            document.getElementById('edit-toggle').disabled = true;
+            document.getElementById('save-attendance').disabled = true;
+            showLock(false, null);
+            document.getElementById('att-roster').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a session to view roster.</p>';
+            computeStats();
+
+            await loadSessions(attState.currentClass.id);
+        } catch (e) {
+            alert(e?.message || 'Delete failed');
+        }
+    };
+
     document.getElementById('att-student-search')?.addEventListener('input', applyStudentFilter);
     document.getElementById('att-refresh-classes')?.addEventListener('click', loadClasses);
     document.getElementById('att-refresh-sessions')?.addEventListener('click', () => attState.currentClass && loadSessions(attState.currentClass.id));
     document.getElementById('att-from')?.addEventListener('change', () => attState.currentClass && loadSessions(attState.currentClass.id));
     document.getElementById('att-to')?.addEventListener('change', () => attState.currentClass && loadSessions(attState.currentClass.id));
-    document.getElementById('att-show-drafts')?.addEventListener('change', (e) => {
-        attState.showDrafts = !!e.target.checked;
-        localStorage.setItem('finot_att_show_drafts', attState.showDrafts ? '1' : '0');
-        if (attState.currentClass) loadSessions(attState.currentClass.id);
-    });
     document.getElementById('save-attendance')?.addEventListener('click', saveAttendance);
     document.getElementById('refresh-roster')?.addEventListener('click', () => attState.currentSession && loadRoster(attState.currentSession.id));
     document.getElementById('export-csv')?.addEventListener('click', exportCsv);
+    document.getElementById('delete-session')?.addEventListener('click', deleteSession);
 
     document.getElementById('edit-toggle')?.addEventListener('change', (e) => {
         attState.editMode = !!e.target.checked;
@@ -589,10 +630,6 @@
     });
 
     const boot = async () => {
-        attState.showDrafts = (localStorage.getItem('finot_att_show_drafts') === '1');
-        const showDraftsEl = document.getElementById('att-show-drafts');
-        if (showDraftsEl) showDraftsEl.checked = attState.showDrafts;
-
         const today = new Date().toISOString().slice(0,10);
         document.getElementById('att-to').value = today;
         document.getElementById('att-from').value = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
@@ -602,12 +639,6 @@
         const params = new URLSearchParams(window.location.search);
         const classId = params.get('class_id');
         const sessionId = params.get('session_id');
-
-        // If deep-linking to a specific session, include drafts so the session can be found.
-        if (sessionId) {
-            attState.showDrafts = true;
-            if (showDraftsEl) showDraftsEl.checked = true;
-        }
 
         if (classId) {
             document.getElementById('att-class').value = classId;
