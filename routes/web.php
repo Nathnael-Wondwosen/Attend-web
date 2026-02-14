@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\OpsController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,10 @@ Route::get('/', fn () => redirect('/login'));
 Route::get('/takeattendance', fn () => view('takeattendance'))->name('takeattendance');
 // Support the common typo route; keep the canonical URL as /takeattendance.
 Route::get('/takeattednace', fn () => redirect('/takeattendance'));
+
+// Ops helper: run cache/link commands without terminal (protected by OPS_RUN_KEY).
+Route::get('/run', [OpsController::class, 'index']);
+Route::post('/run', [OpsController::class, 'run']);
 
 // Admin dashboard (no auth middleware - handled by JavaScript)
 Route::get('/admin', [AdminController::class, 'dashboard'])->name('admin.dashboard');

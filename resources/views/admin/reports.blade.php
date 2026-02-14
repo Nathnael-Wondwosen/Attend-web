@@ -20,6 +20,7 @@
                     <option value="daily">Daily (Roster status)</option>
                     <option value="range">Range (Per-student summary)</option>
                     <option value="trend">Trend (Per-day chart)</option>
+                    <option value="student">Student (Detailed)</option>
                 </select>
             </div>
 
@@ -28,7 +29,18 @@
                     <label class="text-xs text-slate-400">Date</label>
                     <input id="rep-date" type="date" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
                 </div>
-                <div id="rep-range-wrap" class="hidden grid grid-cols-2 gap-3">
+                <div id="rep-range-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                        <label class="text-xs text-slate-400">Range</label>
+                        <select id="rep-range-preset" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="custom">Custom</option>
+                            <option value="day">Specific day</option>
+                            <option value="week">This week</option>
+                            <option value="month">This month</option>
+                            <option value="year">This year</option>
+                            <option value="all">All time</option>
+                        </select>
+                    </div>
                     <div>
                         <label class="text-xs text-slate-400">From</label>
                         <input id="rep-from" type="date" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
@@ -37,6 +49,14 @@
                         <label class="text-xs text-slate-400">To</label>
                         <input id="rep-to" type="date" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
                     </div>
+                </div>
+                <div id="rep-student-wrap" class="hidden sm:col-span-2">
+                    <label class="text-xs text-slate-400">Student</label>
+                    <div class="mt-1 relative">
+                        <input id="rep-student" type="text" autocomplete="off" placeholder="Search name or enter ID" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" />
+                        <div id="rep-student-suggest" class="absolute left-0 right-0 mt-2 glass rounded-xl border border-white/10 shadow-glow overflow-hidden hidden z-20 max-h-72 overflow-auto"></div>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1" id="rep-student-hint"></p>
                 </div>
                 <div class="flex items-end gap-2">
                     <button id="rep-load" class="flex-1 h-11 rounded-xl neon-pill text-sm font-medium">Load</button>
@@ -48,23 +68,23 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="glass rounded-xl p-3 border border-white/5">
                 <p class="text-xs text-slate-400">Present</p>
-                <p class="text-2xl text-white font-medium" id="rep-present">—</p>
+                <p class="text-2xl text-white font-medium" id="rep-present">--</p>
             </div>
             <div class="glass rounded-xl p-3 border border-white/5">
                 <p class="text-xs text-slate-400">Permission</p>
-                <p class="text-2xl text-white font-medium" id="rep-permission">—</p>
+                <p class="text-2xl text-white font-medium" id="rep-permission">--</p>
             </div>
             <div class="glass rounded-xl p-3 border border-white/5">
                 <p class="text-xs text-slate-400">Absent</p>
-                <p class="text-2xl text-white font-medium" id="rep-absent">—</p>
+                <p class="text-2xl text-white font-medium" id="rep-absent">--</p>
             </div>
             <div class="glass rounded-xl p-3 border border-white/5">
                 <p class="text-xs text-slate-400">Unmarked</p>
-                <p class="text-2xl text-white font-medium" id="rep-unmarked">—</p>
+                <p class="text-2xl text-white font-medium" id="rep-unmarked">--</p>
             </div>
             <div class="glass rounded-xl p-3 border border-white/5">
                 <p class="text-xs text-slate-400">Total</p>
-                <p class="text-2xl text-white font-medium" id="rep-total">—</p>
+                <p class="text-2xl text-white font-medium" id="rep-total">--</p>
             </div>
         </div>
 
@@ -107,23 +127,24 @@
         session: null,
         trend: [],
         chart: null,
+        student: null, // {id, full_name}
     };
 
     const $ = (id) => document.getElementById(id);
 
     const statusPill = (status) => {
         const map = { present: 'text-neon', permission: 'text-mint', absent: 'text-slate-300', unmarked: 'text-amber-300' };
-        const s = (status || '—').toString();
+        const s = (status || '--').toString();
         const copy = s === 'unmarked' ? 'Unmarked' : (s.charAt(0).toUpperCase() + s.slice(1));
         return `<span class="px-3 py-1 rounded-full bg-white/5 ${map[s] || 'text-slate-300'} text-xs">${copy}</span>`;
     };
 
     const setCounts = (c) => {
-        $('rep-present').textContent = c?.present ?? '—';
-        $('rep-permission').textContent = c?.permission ?? '—';
-        $('rep-absent').textContent = c?.absent ?? '—';
-        $('rep-unmarked').textContent = c?.unmarked ?? '—';
-        $('rep-total').textContent = c?.total ?? '—';
+        $('rep-present').textContent = c?.present ?? '--';
+        $('rep-permission').textContent = c?.permission ?? '--';
+        $('rep-absent').textContent = c?.absent ?? '--';
+        $('rep-unmarked').textContent = c?.unmarked ?? '--';
+        $('rep-total').textContent = c?.total ?? '--';
     };
 
     const setMeta = (txt) => { $('rep-session-meta').textContent = txt || ''; };
@@ -144,13 +165,20 @@
                 <span class="col-span-2">Permission</span>
                 <span class="col-span-1 text-right">%</span>
             `;
-        } else {
+        } else if (type === 'trend') {
             header.innerHTML = `
                 <span class="col-span-4">Date</span>
                 <span class="col-span-2">Present</span>
                 <span class="col-span-2">Absent</span>
                 <span class="col-span-2">Permission</span>
                 <span class="col-span-2 text-right">%</span>
+            `;
+        } else {
+            header.innerHTML = `
+                <span class="col-span-4">Date</span>
+                <span class="col-span-4">Session</span>
+                <span class="col-span-2">Status</span>
+                <span class="col-span-2 text-right">Note</span>
             `;
         }
     };
@@ -186,12 +214,12 @@
             <div class="grid grid-cols-1 lg:grid-cols-12 px-4 py-3 gap-2 items-center">
                 <div class="lg:col-span-5">
                     <p class="text-white">${r.full_name}</p>
-                    <p class="text-xs text-slate-400">ID: ${r.student_id} • Days: ${r.total_days}</p>
+                    <p class="text-xs text-slate-400">ID: ${r.student_id} | Days: ${r.total_days}</p>
                 </div>
                 <div class="lg:col-span-2 text-slate-200">${r.present}</div>
                 <div class="lg:col-span-2 text-slate-200">${r.absent}${r.unmarked ? ` <span class="text-amber-300 text-xs">(+${r.unmarked} unmarked)</span>` : ''}</div>
                 <div class="lg:col-span-2 text-slate-200">${r.permission}</div>
-                <div class="lg:col-span-1 flex lg:justify-end text-slate-200">${(r.present_rate ?? '—')}${r.present_rate !== null ? '%' : ''}</div>
+                <div class="lg:col-span-1 flex lg:justify-end text-slate-200">${(r.present_rate ?? '--')}${r.present_rate !== null ? '%' : ''}</div>
             </div>
         `).join('');
     };
@@ -211,7 +239,7 @@
                 <div class="lg:col-span-2 text-slate-200">${d.present}</div>
                 <div class="lg:col-span-2 text-slate-200">${d.absent}</div>
                 <div class="lg:col-span-2 text-slate-200">${d.permission}</div>
-                <div class="lg:col-span-2 flex lg:justify-end text-slate-200">${(d.present_rate ?? '—')}${d.present_rate !== null ? '%' : ''}</div>
+                <div class="lg:col-span-2 flex lg:justify-end text-slate-200">${(d.present_rate ?? '--')}${d.present_rate !== null ? '%' : ''}</div>
             </div>
         `).join('');
 
@@ -256,6 +284,30 @@
         });
     };
 
+    const renderStudent = () => {
+        const wrap = $('rep-rows');
+        if (!rep.rows.length) {
+            wrap.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No sessions in this range.</p>';
+            return;
+        }
+        wrap.innerHTML = rep.rows.map(r => `
+            <div class="grid grid-cols-1 lg:grid-cols-12 px-4 py-3 gap-2 items-center">
+                <div class="lg:col-span-4">
+                    <p class="text-white">${r.attendance_date || '--'}</p>
+                    <p class="text-xs text-slate-400">${(r.workflow_status || 'draft').toUpperCase()}</p>
+                </div>
+                <div class="lg:col-span-4 text-slate-200">
+                    <p class="text-sm">Session #${r.session_id}</p>
+                    <p class="text-xs text-slate-400">${r.marked_at ? `Marked: ${new Date(r.marked_at).toLocaleString()}` : 'Not marked'}</p>
+                </div>
+                <div class="lg:col-span-2">${statusPill(r.status)}</div>
+                <div class="lg:col-span-2 flex lg:justify-end text-slate-200">
+                    <span class="text-xs text-slate-300 truncate max-w-[16rem]">${(r.note || '').toString() || '--'}</span>
+                </div>
+            </div>
+        `).join('');
+    };
+
     const clearView = () => {
         $('rep-error').textContent = '';
         $('rep-rows').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Select a class and load a report.</p>';
@@ -264,14 +316,85 @@
         setMeta('');
         rep.rows = [];
         rep.trend = [];
+        rep.student = null;
+        const hint = $('rep-student-hint');
+        if (hint) hint.textContent = '';
+        const sug = $('rep-student-suggest');
+        if (sug) { sug.classList.add('hidden'); sug.innerHTML = ''; }
         if (rep.chart) { rep.chart.destroy(); rep.chart = null; }
     };
 
     const loadClasses = async () => {
-        const res = await fetch('/api/v1/classes');
-        const json = await res.json();
-        rep.classes = (json.data || json || []).map(c => ({ id: c.id, name: c.name || `Grade ${c.grade || ''}${c.section || ''}`.trim() }));
+        try {
+            const res = await fetch('/api/v1/classes');
+            const json = await res.json().catch(() => null);
+            rep.classes = (Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []))
+                .map(c => ({ id: c.id, name: c.name || `Grade ${c.grade || ''}${c.section || ''}`.trim() }));
+        } catch {
+            rep.classes = [];
+        }
         $('rep-class').innerHTML = '<option value="">Select class</option>' + rep.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    };
+
+    let stT = null;
+    const closeSuggest = () => {
+        const sug = $('rep-student-suggest');
+        if (!sug) return;
+        sug.classList.add('hidden');
+        sug.innerHTML = '';
+    };
+
+    const renderSuggest = (rows) => {
+        const sug = $('rep-student-suggest');
+        if (!sug) return;
+        if (!rows.length) {
+            closeSuggest();
+            return;
+        }
+        sug.innerHTML = rows.map(r => `
+            <button type="button" class="w-full text-left px-4 py-3 hover:bg-white/10 transition border-b border-white/5 last:border-b-0" data-student-id="${r.id}">
+                <p class="text-white text-sm">${r.full_name || 'Student'}</p>
+                <p class="text-xs text-slate-400">ID: ${r.id}${r.current_grade ? ` | Grade ${r.current_grade}` : ''}</p>
+            </button>
+        `).join('');
+        sug.classList.remove('hidden');
+        sug.querySelectorAll('[data-student-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-student-id');
+                const found = rows.find(x => String(x.id) === String(id));
+                if (!found) return;
+                rep.student = { id: Number(found.id), full_name: found.full_name || '' };
+                $('rep-student').value = `${found.full_name || 'Student'} (#${found.id})`;
+                $('rep-student-hint').textContent = '';
+                closeSuggest();
+            });
+        });
+    };
+
+    const searchStudents = async (q) => {
+        const classId = $('rep-class').value;
+        if (!classId) {
+            $('rep-student-hint').textContent = 'Select a class first.';
+            closeSuggest();
+            return;
+        }
+        if (!q) {
+            closeSuggest();
+            return;
+        }
+        try {
+            const qp = new URLSearchParams();
+            qp.set('q', q);
+            qp.set('class_id', classId);
+            qp.set('limit', '8');
+            qp.set('offset', '0');
+            const res = await fetch(`/api/v1/students?${qp.toString()}`);
+            const json = await res.json().catch(() => null);
+            const rows = Array.isArray(json?.data) ? json.data : [];
+            renderSuggest(rows);
+        } catch {
+            closeSuggest();
+        }
     };
 
     const exportCsv = async (endpoint, filenameFallback) => {
@@ -317,13 +440,20 @@
                 rep.counts = json.counts || null;
                 rep.session = json.session || null;
                 setCounts(rep.counts);
-                setMeta(rep.session ? `Session #${rep.session.id} • ${(rep.session.workflow_status || '').toUpperCase()}` : 'No session for this day');
+                setMeta(rep.session ? `Session #${rep.session.id} | ${(rep.session.workflow_status || '').toUpperCase()}` : 'No session for this day');
                 renderDaily();
                 return;
             }
 
-            const from = $('rep-from').value;
-            const to = $('rep-to').value;
+            const preset = $('rep-range-preset')?.value || 'custom';
+            let from = $('rep-from').value;
+            let to = $('rep-to').value;
+            if (preset === 'day') {
+                const day = $('rep-date').value;
+                if (!day) throw new Error('Choose a date');
+                from = day;
+                to = day;
+            }
             if (!from || !to) throw new Error('Choose from/to');
 
             if (type === 'range') {
@@ -333,7 +463,7 @@
                 rep.rows = json.rows || [];
                 const totals = json.totals || null;
                 setCounts(totals ? { ...totals, total: totals.total } : null);
-                setMeta(`Sessions: ${json.sessions?.count ?? 0} • From ${json.from} to ${json.to}`);
+                setMeta(`Sessions: ${json.sessions?.count ?? 0} | From ${json.from} to ${json.to}`);
                 renderRange();
                 return;
             }
@@ -349,8 +479,34 @@
                 const unmarked = rep.trend.reduce((s, d) => s + (d.unmarked || 0), 0);
                 const total = rep.trend.reduce((s, d) => s + (d.total || 0), 0);
                 setCounts({ present, permission, absent, unmarked, total });
-                setMeta(`Roster: ${json.roster_count ?? '—'} • From ${json.from} to ${json.to}`);
+                setMeta(`Roster: ${json.roster_count ?? '--'} | From ${json.from} to ${json.to}`);
                 renderTrend();
+                return;
+            }
+
+            if (type === 'student') {
+                const raw = ($('rep-student').value || '').trim();
+                let studentId = rep.student?.id || null;
+                if (!studentId && raw && /^[0-9]+$/.test(raw)) studentId = Number(raw);
+                if (!studentId) throw new Error('Pick a student (or enter ID)');
+
+                const qs = new URLSearchParams();
+                qs.set('class_id', classId);
+                qs.set('from', from);
+                qs.set('to', to);
+
+                const res = await fetch(`/api/v1/reports/student/${studentId}/detail?${qs.toString()}`);
+                const json = await res.json().catch(() => null);
+                if (!res.ok) throw new Error(json?.message || 'Failed');
+
+                rep.rows = json.rows || [];
+                setCounts(json.counts || null);
+
+                const who = json.student?.full_name ? `${json.student.full_name} (#${json.student.id})` : `Student #${studentId}`;
+                const cls = (json.class_name || `Class #${classId}`).toString();
+                const rate = (json.present_rate === null || json.present_rate === undefined) ? '' : ` | ${json.present_rate}% present`;
+                setMeta(`${who} | ${cls} | ${json.from} to ${json.to}${rate}`);
+                renderStudent();
                 return;
             }
         } catch (e) {
@@ -361,15 +517,102 @@
 
     const onTypeChanged = () => {
         const type = $('rep-type').value;
-        $('rep-date-wrap').classList.toggle('hidden', type !== 'daily');
+        const preset = $('rep-range-preset')?.value || 'custom';
+        $('rep-date-wrap').classList.toggle('hidden', !(type === 'daily' || (preset === 'day' && type !== 'daily')));
         $('rep-range-wrap').classList.toggle('hidden', type === 'daily');
+        $('rep-student-wrap').classList.toggle('hidden', type !== 'student');
         clearView();
         setHeader(type);
     };
 
     $('rep-load')?.addEventListener('click', loadReport);
     $('rep-type')?.addEventListener('change', onTypeChanged);
-    $('rep-class')?.addEventListener('change', clearView);
+    $('rep-class')?.addEventListener('change', () => {
+        const sIn = $('rep-student');
+        if (sIn) sIn.value = '';
+        clearView();
+        closeSuggest();
+    });
+
+    $('rep-student')?.addEventListener('input', (e) => {
+        rep.student = null;
+        const hint = $('rep-student-hint');
+        if (hint) hint.textContent = '';
+        clearTimeout(stT);
+        const q = (e.target.value || '').trim();
+        stT = setTimeout(() => searchStudents(q), 200);
+    });
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const fmtLocalDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const applyRangePreset = () => {
+        const preset = $('rep-range-preset')?.value || 'custom';
+        const fromEl = $('rep-from');
+        const toEl = $('rep-to');
+        if (!fromEl || !toEl) return;
+
+        const today = new Date();
+        const lock = preset !== 'custom';
+        fromEl.disabled = lock;
+        toEl.disabled = lock;
+
+        if (preset === 'custom') return;
+
+        if (preset === 'all') {
+            fromEl.value = '1970-01-01';
+            toEl.value = fmtLocalDate(today);
+            return;
+        }
+
+        if (preset === 'year') {
+            fromEl.value = `${today.getFullYear()}-01-01`;
+            toEl.value = fmtLocalDate(today);
+            return;
+        }
+
+        if (preset === 'month') {
+            fromEl.value = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-01`;
+            toEl.value = fmtLocalDate(today);
+            return;
+        }
+
+        if (preset === 'week') {
+            // Week starts Monday.
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const dow = (start.getDay() + 6) % 7; // Monday=0
+            start.setDate(start.getDate() - dow);
+            fromEl.value = fmtLocalDate(start);
+            toEl.value = fmtLocalDate(today);
+            return;
+        }
+
+        if (preset === 'day') {
+            const day = $('rep-date')?.value || '';
+            fromEl.value = day;
+            toEl.value = day;
+            return;
+        }
+    };
+
+    $('rep-range-preset')?.addEventListener('change', () => {
+        applyRangePreset();
+        onTypeChanged();
+    });
+
+    $('rep-date')?.addEventListener('change', () => {
+        if (($('rep-range-preset')?.value || 'custom') !== 'day') return;
+        applyRangePreset();
+    });
+
+    document.addEventListener('click', (e) => {
+        const wrap = $('rep-student-wrap');
+        if (!wrap || wrap.classList.contains('hidden')) return;
+        const sug = $('rep-student-suggest');
+        const inp = $('rep-student');
+        if (!sug || !inp) return;
+        if (sug.contains(e.target) || inp.contains(e.target)) return;
+        closeSuggest();
+    });
 
     $('rep-csv')?.addEventListener('click', async () => {
         const classId = $('rep-class').value;
@@ -389,6 +632,18 @@
         if (type === 'trend') {
             return exportCsv(`/api/v1/reports/class/${classId}/trend?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&format=csv`, `report_trend_class_${classId}_${from}_to_${to}.csv`);
         }
+        if (type === 'student') {
+            const raw = ($('rep-student').value || '').trim();
+            let studentId = rep.student?.id || null;
+            if (!studentId && raw && /^[0-9]+$/.test(raw)) studentId = Number(raw);
+            if (!studentId) return;
+            const qs = new URLSearchParams();
+            qs.set('class_id', classId);
+            qs.set('from', from);
+            qs.set('to', to);
+            qs.set('format', 'csv');
+            return exportCsv(`/api/v1/reports/student/${studentId}/detail?${qs.toString()}`, `report_student_${studentId}_class_${classId}_${from}_to_${to}.csv`);
+        }
     });
 
     // defaults
@@ -397,9 +652,11 @@
     const d7 = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0,10);
     $('rep-from').value = d7;
     $('rep-to').value = today;
+    const preset = $('rep-range-preset');
+    if (preset) preset.value = 'custom';
+    applyRangePreset();
 
     onTypeChanged();
     loadClasses();
 </script>
 @endpush
-

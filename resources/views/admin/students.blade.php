@@ -208,13 +208,20 @@
             document.getElementById('student-total').textContent = '--';
             document.getElementById('student-recent').innerHTML = '<p class="text-slate-400 text-sm">No student selected.</p>';
 
-            document.getElementById('m-student-name')?.textContent = 'Select a student';
-            document.getElementById('m-student-meta')?.textContent = 'Attendance summary and recent records.';
-            document.getElementById('m-student-id')?.textContent = '--';
-            document.getElementById('m-student-present')?.textContent = '--';
-            document.getElementById('m-student-absent')?.textContent = '--';
-            document.getElementById('m-student-permission')?.textContent = '--';
-            document.getElementById('m-student-total')?.textContent = '--';
+            const mName = document.getElementById('m-student-name');
+            if (mName) mName.textContent = 'Select a student';
+            const mMeta = document.getElementById('m-student-meta');
+            if (mMeta) mMeta.textContent = 'Attendance summary and recent records.';
+            const mId = document.getElementById('m-student-id');
+            if (mId) mId.textContent = '--';
+            const mPresent = document.getElementById('m-student-present');
+            if (mPresent) mPresent.textContent = '--';
+            const mAbsent = document.getElementById('m-student-absent');
+            if (mAbsent) mAbsent.textContent = '--';
+            const mPerm = document.getElementById('m-student-permission');
+            if (mPerm) mPerm.textContent = '--';
+            const mTotal = document.getElementById('m-student-total');
+            if (mTotal) mTotal.textContent = '--';
             document.getElementById('m-student-recent') && (document.getElementById('m-student-recent').innerHTML = '<p class="text-slate-400 text-sm">No student selected.</p>');
             return;
         }
@@ -223,9 +230,12 @@
         document.getElementById('student-id').textContent = s.id;
         document.getElementById('student-meta').textContent = `${s.gender ? s.gender : '--'}${s.current_grade ? ` | Grade ${s.current_grade}` : ''}`;
 
-        document.getElementById('m-student-name')?.textContent = s.full_name || 'Student';
-        document.getElementById('m-student-id')?.textContent = s.id;
-        document.getElementById('m-student-meta')?.textContent = `${s.gender ? s.gender : '--'}${s.current_grade ? ` | Grade ${s.current_grade}` : ''}`;
+        const mName = document.getElementById('m-student-name');
+        if (mName) mName.textContent = s.full_name || 'Student';
+        const mId = document.getElementById('m-student-id');
+        if (mId) mId.textContent = s.id;
+        const mMeta = document.getElementById('m-student-meta');
+        if (mMeta) mMeta.textContent = `${s.gender ? s.gender : '--'}${s.current_grade ? ` | Grade ${s.current_grade}` : ''}`;
 
         const att = sState.attendance;
         if (!att) {
@@ -235,10 +245,14 @@
             document.getElementById('student-total').textContent = '--';
             document.getElementById('student-recent').innerHTML = '<p class="text-slate-400 text-sm">Loading attendance...</p>';
 
-            document.getElementById('m-student-present')?.textContent = '--';
-            document.getElementById('m-student-absent')?.textContent = '--';
-            document.getElementById('m-student-permission')?.textContent = '--';
-            document.getElementById('m-student-total')?.textContent = '--';
+            const mPresent = document.getElementById('m-student-present');
+            if (mPresent) mPresent.textContent = '--';
+            const mAbsent = document.getElementById('m-student-absent');
+            if (mAbsent) mAbsent.textContent = '--';
+            const mPerm = document.getElementById('m-student-permission');
+            if (mPerm) mPerm.textContent = '--';
+            const mTotal = document.getElementById('m-student-total');
+            if (mTotal) mTotal.textContent = '--';
             document.getElementById('m-student-recent') && (document.getElementById('m-student-recent').innerHTML = '<p class="text-slate-400 text-sm">Loading attendance...</p>');
             return;
         }
@@ -248,10 +262,14 @@
         document.getElementById('student-permission').textContent = att.summary.permission;
         document.getElementById('student-total').textContent = att.summary.total;
 
-        document.getElementById('m-student-present')?.textContent = att.summary.present;
-        document.getElementById('m-student-absent')?.textContent = att.summary.absent;
-        document.getElementById('m-student-permission')?.textContent = att.summary.permission;
-        document.getElementById('m-student-total')?.textContent = att.summary.total;
+        const mPresent = document.getElementById('m-student-present');
+        if (mPresent) mPresent.textContent = att.summary.present;
+        const mAbsent = document.getElementById('m-student-absent');
+        if (mAbsent) mAbsent.textContent = att.summary.absent;
+        const mPerm = document.getElementById('m-student-permission');
+        if (mPerm) mPerm.textContent = att.summary.permission;
+        const mTotal = document.getElementById('m-student-total');
+        if (mTotal) mTotal.textContent = att.summary.total;
 
         const pill = (st) => {
             const map = { present: 'text-neon', absent: 'text-slate-300', permission: 'text-mint' };
@@ -357,14 +375,26 @@
         }
         if (hint) hint.textContent = '';
         try {
-            const res = await fetch('/api/v1/classes', { headers: { 'Accept': 'application/json' } });
+            const res = await fetch('/api/v1/classes');
+
+            // If auth is invalid, the API should return 401 JSON. If it doesn't,
+            // fail safe by redirecting to /login (same behavior as layout auth guard).
+            if (res.status === 401) {
+                if (hint) hint.textContent = 'Login expired. Redirecting to login...';
+                localStorage.removeItem('finot_token');
+                localStorage.removeItem('finot_user');
+                window.location.href = '/login';
+                return;
+            }
+
             const json = await res.json().catch(() => null);
             if (!res.ok) {
                 const msg = json?.message || `Failed (${res.status})`;
-                if (res.status === 401 && hint) hint.textContent = 'Login expired. Please Logout and login again.';
                 throw new Error(msg);
             }
-            const rows = (json.data || json || []);
+
+            // AdminDataController@classes currently returns an array (not {data:[]}).
+            const rows = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
             sState.classes = rows.map(c => ({
                 id: c.id,
                 name: c.name || `Grade ${c.grade || ''}${c.section || ''}`.trim(),

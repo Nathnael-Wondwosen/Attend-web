@@ -398,6 +398,151 @@ class ReportController extends Controller
         ]);
     }
 
+    public function studentDetail(Request $request, int $studentId)
+    {
+        $data = $request->validate([
+            'class_id' => ['required', 'integer'],
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+            'format' => ['nullable', 'string'],
+        ]);
+
+        $classId = (int) $data['class_id'];
+        $from = Carbon::parse($data['from'])->toDateString();
+        $to = Carbon::parse($data['to'])->toDateString();
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $format = (string) ($data['format'] ?? $request->query('format', 'json'));
+
+        // Authorization:
+        // - Admin can view any student's report.
+        // - Teacher account can only view if assigned to class and student is in the class roster.
+        $this->authorizeUserForStudentInClass($request, $studentId, $classId);
+
+        $student = DB::table('students')
+            ->where('id', $studentId)
+            ->first(['id', 'full_name', 'gender', 'current_grade']);
+
+        if (!$student) {
+            abort(404, 'Student not found');
+        }
+
+        $className = DB::table('classes')->where('id', $classId)->value('name');
+
+        // Per-session detail (including "missing" marks as unmarked/absent depending on workflow).
+        $rows = DB::table('att_sessions as ses')
+            ->leftJoin('att_attendance as aa', function ($join) use ($studentId) {
+                $join->on('aa.session_id', '=', 'ses.id')
+                    ->where('aa.student_id', '=', $studentId);
+            })
+            ->where('ses.class_id', $classId)
+            ->whereBetween('ses.attendance_date', [$from, $to])
+            ->orderBy('ses.attendance_date')
+            ->orderBy('ses.id')
+            ->get([
+                'ses.id as session_id',
+                'ses.attendance_date',
+                'ses.workflow_status',
+                'ses.submitted_at',
+                'aa.status',
+                'aa.method',
+                'aa.marked_at',
+                'aa.note',
+            ])
+            ->map(function ($r) {
+                $wf = (string) ($r->workflow_status ?? 'draft');
+                $status = $r->status;
+                if (!$status) {
+                    $status = ($wf === 'submitted') ? 'absent' : 'unmarked';
+                }
+                return [
+                    'session_id' => (int) $r->session_id,
+                    'attendance_date' => (string) $r->attendance_date,
+                    'workflow_status' => $wf,
+                    'submitted_at' => $r->submitted_at ? Carbon::parse($r->submitted_at)->toISOString() : null,
+                    'status' => (string) $status,
+                    'method' => $r->method,
+                    'marked_at' => $r->marked_at ? Carbon::parse($r->marked_at)->toISOString() : null,
+                    'note' => $r->note,
+                ];
+            })
+            ->values();
+
+        $counts = [
+            'present' => (int) $rows->where('status', 'present')->count(),
+            'permission' => (int) $rows->where('status', 'permission')->count(),
+            'absent' => (int) $rows->where('status', 'absent')->count(),
+            'unmarked' => (int) $rows->where('status', 'unmarked')->count(),
+            'total' => (int) $rows->count(),
+        ];
+        $presentRate = $counts['total'] > 0 ? round(($counts['present'] * 100.0) / $counts['total'], 1) : null;
+
+        if ($format === 'csv') {
+            $fileBase = preg_replace('/[^A-Za-z0-9._-]+/', '_', (string) ($student->full_name ?: "student_{$studentId}"));
+            $classBase = preg_replace('/[^A-Za-z0-9._-]+/', '_', (string) ($className ?: "class_{$classId}"));
+            $filename = "report_student_{$fileBase}_{$classBase}_{$from}_to_{$to}.csv";
+
+            $response = new StreamedResponse(function () use ($rows, $student, $classId, $className, $from, $to) {
+                $out = fopen('php://output', 'w');
+                if ($out === false) return;
+                fputcsv($out, [
+                    'from',
+                    'to',
+                    'class_id',
+                    'class_name',
+                    'student_id',
+                    'full_name',
+                    'session_id',
+                    'attendance_date',
+                    'workflow_status',
+                    'status',
+                    'method',
+                    'marked_at',
+                    'note',
+                ]);
+                foreach ($rows as $row) {
+                    fputcsv($out, [
+                        $from,
+                        $to,
+                        $classId,
+                        $className,
+                        (int) $student->id,
+                        (string) $student->full_name,
+                        $row['session_id'],
+                        $row['attendance_date'],
+                        $row['workflow_status'],
+                        $row['status'],
+                        $row['method'],
+                        $row['marked_at'],
+                        $row['note'],
+                    ]);
+                }
+                fclose($out);
+            });
+            $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+            $response->headers->set('Content-Disposition', 'attachment; filename="'.$filename.'"');
+            return $response;
+        }
+
+        return response()->json([
+            'class_id' => $classId,
+            'class_name' => $className,
+            'student' => [
+                'id' => (int) $student->id,
+                'full_name' => (string) $student->full_name,
+                'gender' => $student->gender,
+                'current_grade' => $student->current_grade,
+            ],
+            'from' => $from,
+            'to' => $to,
+            'counts' => $counts,
+            'present_rate' => $presentRate,
+            'rows' => $rows,
+        ]);
+    }
+
     protected function authorizeUserForClass(Request $request, int $classId): void
     {
         $user = $request->user();
@@ -427,5 +572,32 @@ class ReportController extends Controller
 
         abort(403, 'Forbidden');
     }
-}
 
+    protected function authorizeUserForStudentInClass(Request $request, int $studentId, int $classId): void
+    {
+        $user = $request->user();
+        if ($user instanceof Admin) {
+            return;
+        }
+
+        // Reuse class authorization for teacher accounts.
+        $this->authorizeUserForClass($request, $classId);
+
+        // Teacher must only view students in that class.
+        if ($user instanceof AttTeacherAccount) {
+            $member = DB::table('class_enrollments')
+                ->where('class_id', $classId)
+                ->where('student_id', $studentId)
+                ->where('status', 'active')
+                ->exists();
+
+            if (!$member) {
+                abort(403, 'Student is not in this class');
+            }
+
+            return;
+        }
+
+        abort(403, 'Forbidden');
+    }
+}

@@ -51,21 +51,24 @@
         select { color-scheme: dark; }
         select option, select optgroup { background-color: #0b1224; color: #e2e8f0; }
         input[type="date"] { color-scheme: dark; }
+        .toast-enter { transform: translateY(8px); opacity: 0; }
+        .toast-in { transform: translateY(0); opacity: 1; transition: transform 160ms ease, opacity 160ms ease; }
     </style>
 </head>
 <body class="min-h-screen">
     <div class="holo-bg"></div>
+
+    {{-- Toasts --}}
+    <div id="take-toasts" class="fixed top-3 right-3 left-3 sm:left-auto z-[60] space-y-2 pointer-events-none"></div>
+
     <main class="relative z-10 max-w-3xl mx-auto px-4 py-6 space-y-4">
         <div class="glass rounded-2xl p-5 shadow-glow">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Teacher</p>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Take attendance</p>
                     <h1 class="text-2xl text-white font-medium">Take Attendance</h1>
                     <p class="text-slate-400 text-sm mt-1">Select class, set date, mark statuses, then save and submit.</p>
                 </div>
-                <button id="take-logout" type="button" class="h-10 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
-                    <i class="fas fa-right-from-bracket"></i><span class="text-sm">Logout</span>
-                </button>
             </div>
 
             <p class="text-sm text-red-300 mt-3" id="take-error"></p>
@@ -122,7 +125,7 @@
                     <span class="col-span-4 text-right">Actions</span>
                 </div>
                 <div id="take-roster" class="divide-y divide-white/5 min-h-[220px]">
-                    <p class="text-slate-400 text-sm px-4 py-3">Enter a token, then open a class and date.</p>
+                    <p class="text-slate-400 text-sm px-4 py-3">Select a class and date, then press Open.</p>
                 </div>
             </div>
 
@@ -145,7 +148,7 @@
 
             <div id="lock-banner" class="hidden glass rounded-xl p-4 border border-white/5 mt-4">
                 <p class="text-white text-sm font-medium">This attendance is locked</p>
-                <p class="text-slate-400 text-sm mt-1" id="lock-banner-copy">Submitted more than 7 days ago.</p>
+                <p class="text-slate-400 text-sm mt-1" id="lock-banner-copy">Submitted attendance cannot be edited.</p>
             </div>
         </div>
     </main>
@@ -179,7 +182,6 @@
 
     <script>
         const take = {
-            teacherToken: '',
             classes: [],
             currentClassId: null,
             currentSessionId: null,
@@ -192,6 +194,25 @@
 
         const el = (id) => document.getElementById(id);
         const setError = (m) => { el('take-error').textContent = m || ''; };
+
+        const toast = (type, msg) => {
+            const wrap = el('take-toasts');
+            if (!wrap) return;
+            const palette = {
+                success: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100',
+                error: 'border-red-400/30 bg-red-500/10 text-red-100',
+                info: 'border-white/10 bg-white/5 text-slate-200',
+            };
+            const node = document.createElement('div');
+            node.className = `toast-enter pointer-events-none glass rounded-xl border px-4 py-3 shadow-glow ${palette[type] || palette.info}`;
+            node.innerHTML = `<p class="text-sm">${(msg || '').toString()}</p>`;
+            wrap.appendChild(node);
+            requestAnimationFrame(() => node.classList.add('toast-in'));
+            setTimeout(() => {
+                node.classList.remove('toast-in');
+                setTimeout(() => node.remove(), 180);
+            }, 2200);
+        };
         const syncMobileBar = () => {
             const map = [
                 ['take-m-all-present', 'take-all-present'],
@@ -234,22 +255,16 @@
                 el('take-open').disabled = true;
                 el('take-all-present').disabled = true;
             } else {
-                el('take-open').disabled = !take.mode || !el('take-class').value || !el('take-date').value;
+                el('take-open').disabled = !el('take-class').value || !el('take-date').value;
                 el('take-all-present').disabled = !take.currentSessionId || take.locked;
             }
             syncMobileBar();
         };
 
-        const setModeBadge = () => {
-            const map = { none: 'Mode: --', public: 'Mode: Token (no login)', teacher: 'Mode: Teacher login' };
-            el('mode-badge').textContent = map[take.mode] || 'Mode: --';
-            el('take-logout').classList.toggle('hidden', take.mode !== 'teacher');
-        };
-
         const api = async (path, options = {}) => {
-            const headers = { ...(options.headers || {}) };
-            headers['Authorization'] = `Bearer ${take.teacherToken}`;
-            return fetch(`/api/v1${path}`, { ...options, headers });
+            const headers = new Headers(options.headers || {});
+            if (!headers.has('Accept')) headers.set('Accept', 'application/json');
+            return fetch(`/api/v1/public/v1${path}`, { ...options, headers });
         };
 
         const statusPill = (status) => {
@@ -264,7 +279,7 @@
             const copy = el('lock-banner-copy');
             if (!locked) { banner.classList.add('hidden'); return; }
             banner.classList.remove('hidden');
-            copy.textContent = editableUntil ? `Locked after ${editableUntil}.` : 'Submitted more than 7 days ago.';
+            copy.textContent = 'Submitted attendance cannot be edited.';
         };
 
         const computeStats = () => {
@@ -353,7 +368,7 @@
         };
 
         const loadClasses = async () => {
-            const res = await api('/teacher/classes');
+            const res = await api('/classes');
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.message || 'Failed to load classes');
             take.classes = json?.data || json || [];
@@ -361,18 +376,6 @@
                 const name = c.name || `Grade ${c.grade || ''}${c.section || ''}`.trim();
                 return `<option value="${c.id}">${name}</option>`;
             }).join('');
-        };
-
-        const validateTeacherToken = async () => {
-            if (!take.teacherToken) return false;
-            try {
-                const res = await fetch('/api/v1/me', { headers: { 'Authorization': `Bearer ${take.teacherToken}` } });
-                const json = await res.json().catch(() => null);
-                if (!res.ok || json?.type !== 'teacher') return false;
-                return true;
-            } catch {
-                return false;
-            }
         };
 
         const openSession = async () => {
@@ -392,7 +395,11 @@
             });
             const json = await res.json().catch(() => null);
             setBusy(false, 'refresh');
-            if (!res.ok) throw new Error(json?.message || 'Failed to open session');
+            if (!res.ok) {
+                const msg = json?.message || `Failed to open session (${res.status})`;
+                toast('error', msg);
+                throw new Error(msg);
+            }
             const session = json.session || json;
             take.currentClassId = Number(classId);
             take.currentSessionId = session.id;
@@ -454,6 +461,7 @@
                 take.dirty = {};
                 el('take-save').disabled = true;
                 setStatusBox('Saved', `Saved at ${new Date().toLocaleTimeString()}.`);
+                toast('success', 'Saved');
             } finally {
                 setBusy(false, 'save');
                 syncMobileBar();
@@ -470,16 +478,10 @@
             try {
                 const res = await api(`/sessions/${take.currentSessionId}/close`, { method: 'POST' });
                 const json = await res.json().catch(() => null);
-                if (!res.ok) throw new Error(json?.message || 'Failed to submit');
-
-                // Backend may return 200 "Already submitted". Treat as a user-visible error and do not clear the page.
-                const msg = (json?.message || '').toString().toLowerCase();
-                if (msg.includes('already submitted')) {
-                    setError('Already submitted for this class/date.');
-                    setStatusBox('Already submitted', 'This attendance was already submitted earlier. No duplicate submission was made.');
-                    // Refresh roster so the teacher sees the current state.
-                    await loadRoster();
-                    return;
+                if (!res.ok) {
+                    const msg = json?.message || `Failed to submit (${res.status})`;
+                    toast('error', msg);
+                    throw new Error(msg);
                 }
 
                 // Clear session state so the UI is "fresh" for a new attendance.
@@ -496,6 +498,7 @@
                 showLock(false, null);
                 renderRoster();
                 setStatusBox('Submitted', 'Attendance submitted. Change date (or class) and press Open to start a new attendance.');
+                toast('success', 'Attendance submitted');
             } finally {
                 setBusy(false, 'submit');
                 syncMobileBar();
@@ -512,25 +515,6 @@
             syncMobileBar();
         };
 
-        const useTeacherLogin = async (token) => {
-            take.teacherToken = (token || '').trim();
-            if (!take.teacherToken) return;
-            const ok = await validateTeacherToken();
-            if (!ok) throw new Error('Teacher login expired. Please login again.');
-            await loadClasses();
-            setEnabled(true);
-            setStatusBox('Ready', 'Select class and date, then press Open.');
-        };
-
-        const teacherTokenKey = 'finot_teacher_token';
-        const teacherExisting = localStorage.getItem(teacherTokenKey) || '';
-
-        el('take-logout').addEventListener('click', () => {
-            localStorage.removeItem(teacherTokenKey);
-            take.teacherToken = '';
-            window.location.href = '/login?role=teacher';
-        });
-
         el('take-date').value = new Date().toISOString().slice(0, 10);
         el('take-open').addEventListener('click', () => openSession().catch(e => { setError(e?.message || 'Failed'); setBusy(false, 'refresh'); }));
         el('take-refresh').addEventListener('click', () => take.currentSessionId && loadRoster().catch(e => setError(e?.message || 'Failed')));
@@ -538,6 +522,22 @@
         el('take-submit').addEventListener('click', () => submit().catch(e => { setError(e?.message || 'Failed'); setBusy(false, 'submit'); }));
         el('take-all-present').addEventListener('click', allPresent);
         el('take-search').addEventListener('input', applyFilter);
+        el('take-class').addEventListener('change', () => {
+            // Allow re-opening a different class/date cleanly.
+            take.currentClassId = null;
+            take.currentSessionId = null;
+            take.roster = [];
+            take.filtered = [];
+            take.dirty = {};
+            take.locked = false;
+            take.editableUntil = null;
+            el('take-save').disabled = true;
+            setRosterEnabled(false);
+            showLock(false, null);
+            renderRoster();
+            setBusy(false, 'refresh');
+        });
+        el('take-date').addEventListener('change', () => setBusy(false, 'refresh'));
 
         // Mobile bar wiring (mirror main actions).
         el('take-m-all-present')?.addEventListener('click', () => el('take-all-present')?.click());
@@ -546,18 +546,16 @@
         el('take-m-refresh')?.addEventListener('click', () => el('take-refresh')?.click());
         syncMobileBar();
 
-        // Require teacher login.
+        // Public mode: no login/token required.
         (async () => {
-            if (teacherExisting) {
-                try {
-                    await useTeacherLogin(teacherExisting);
-                    syncMobileBar();
-                    return;
-                } catch {
-                    localStorage.removeItem(teacherTokenKey);
-                }
+            try {
+                await loadClasses();
+                setEnabled(true);
+                setStatusBox('Ready', 'Select class and date, then press Open.');
+                setBusy(false, 'refresh');
+            } catch (e) {
+                setError(e?.message || 'Failed to load classes');
             }
-            window.location.href = '/login?role=teacher';
         })();
     </script>
 </body>

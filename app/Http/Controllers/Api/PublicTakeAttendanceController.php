@@ -13,10 +13,23 @@ use Illuminate\Validation\Rule;
 class PublicTakeAttendanceController extends Controller
 {
     protected const STATUSES = ['present', 'absent', 'permission'];
-    protected const SUBMISSION_EDIT_DAYS = 7;
+
+    protected function openMode(): bool
+    {
+        // NOTE: This intentionally removes all auth for /takeattendance.
+        // Set FINOT_TAKEATTENDANCE_OPEN=false to re-enable token protection.
+        return (bool) env('FINOT_TAKEATTENDANCE_OPEN', true);
+    }
 
     public function me(Request $request)
     {
+        if ($this->openMode()) {
+            return response()->json([
+                'open' => true,
+                'message' => 'Public take-attendance is enabled (no token required).',
+            ]);
+        }
+
         $token = $this->requireTakeToken($request);
         return response()->json([
             'teacher_id' => (int) $token->teacher_id,
@@ -27,6 +40,25 @@ class PublicTakeAttendanceController extends Controller
 
     public function classes(Request $request)
     {
+        if ($this->openMode()) {
+            return DB::table('classes as c')
+                ->select([
+                    'c.id',
+                    'c.name',
+                    'c.grade',
+                    'c.section',
+                ])
+                ->selectSub(function ($q) {
+                    $q->from('class_enrollments as ce')
+                        ->selectRaw('COUNT(*)')
+                        ->whereColumn('ce.class_id', 'c.id')
+                        ->where('ce.status', 'active');
+                }, 'students_count')
+                ->orderBy('c.grade')
+                ->orderBy('c.section')
+                ->get();
+        }
+
         $token = $this->requireTakeToken($request);
         $teacherId = (int) $token->teacher_id;
 
@@ -65,9 +97,12 @@ class PublicTakeAttendanceController extends Controller
 
     public function open(Request $request, int $classId)
     {
-        $token = $this->requireTakeToken($request);
-        $teacherId = (int) $token->teacher_id;
-        $this->authorizeTeacherForClass($teacherId, $classId);
+        $teacherId = null;
+        if (!$this->openMode()) {
+            $token = $this->requireTakeToken($request);
+            $teacherId = (int) $token->teacher_id;
+            $this->authorizeTeacherForClass($teacherId, $classId);
+        }
 
         $data = $request->validate([
             'attendance_date' => ['required', 'date'],
@@ -81,6 +116,14 @@ class PublicTakeAttendanceController extends Controller
             ->first();
 
         if ($existing) {
+            if (($existing->workflow_status ?? 'draft') === 'submitted') {
+                return response()->json([
+                    'message' => 'Attendance already submitted for this class/date',
+                    'session' => $existing,
+                    'locked' => true,
+                    'editable_until' => null,
+                ], 409);
+            }
             return response()->json([
                 'session' => $existing,
                 'locked' => $this->isSessionLocked($existing),
@@ -110,9 +153,11 @@ class PublicTakeAttendanceController extends Controller
 
     public function index(Request $request, int $classId)
     {
-        $token = $this->requireTakeToken($request);
-        $teacherId = (int) $token->teacher_id;
-        $this->authorizeTeacherForClass($teacherId, $classId);
+        if (!$this->openMode()) {
+            $token = $this->requireTakeToken($request);
+            $teacherId = (int) $token->teacher_id;
+            $this->authorizeTeacherForClass($teacherId, $classId);
+        }
 
         $request->validate([
             'from' => ['nullable', 'date'],
@@ -135,11 +180,15 @@ class PublicTakeAttendanceController extends Controller
 
     public function roster(Request $request, int $sessionId)
     {
-        $token = $this->requireTakeToken($request);
-        $teacherId = (int) $token->teacher_id;
+        if (!$this->openMode()) {
+            $token = $this->requireTakeToken($request);
+            $teacherId = (int) $token->teacher_id;
 
-        $session = AttSession::findOrFail($sessionId);
-        $this->authorizeTeacherForClass($teacherId, (int) $session->class_id);
+            $session = AttSession::findOrFail($sessionId);
+            $this->authorizeTeacherForClass($teacherId, (int) $session->class_id);
+        } else {
+            $session = AttSession::findOrFail($sessionId);
+        }
 
         $classId = (int) $session->class_id;
 
@@ -178,11 +227,16 @@ class PublicTakeAttendanceController extends Controller
 
     public function batchUpsertStatus(Request $request, int $sessionId)
     {
-        $token = $this->requireTakeToken($request);
-        $teacherId = (int) $token->teacher_id;
+        $teacherId = null;
+        if (!$this->openMode()) {
+            $token = $this->requireTakeToken($request);
+            $teacherId = (int) $token->teacher_id;
+        }
 
         $session = AttSession::findOrFail($sessionId);
-        $this->authorizeTeacherForClass($teacherId, (int) $session->class_id);
+        if (!$this->openMode()) {
+            $this->authorizeTeacherForClass((int) $teacherId, (int) $session->class_id);
+        }
 
         if ($this->isSessionLocked($session)) {
             return response()->json(['message' => 'Attendance is locked (submitted more than 7 days ago)'], 423);
@@ -241,18 +295,23 @@ class PublicTakeAttendanceController extends Controller
 
     public function close(Request $request, int $sessionId)
     {
-        $token = $this->requireTakeToken($request);
-        $teacherId = (int) $token->teacher_id;
+        $teacherId = null;
+        if (!$this->openMode()) {
+            $token = $this->requireTakeToken($request);
+            $teacherId = (int) $token->teacher_id;
+        }
 
         $session = AttSession::findOrFail($sessionId);
-        $this->authorizeTeacherForClass($teacherId, (int) $session->class_id);
+        if (!$this->openMode()) {
+            $this->authorizeTeacherForClass((int) $teacherId, (int) $session->class_id);
+        }
 
         if (($session->workflow_status ?? 'draft') === 'submitted') {
             return response()->json([
-                'message' => 'Already submitted',
-                'locked' => $this->isSessionLocked($session),
-                'editable_until' => $this->editableUntil($session)?->toISOString(),
-            ], 200);
+                'message' => 'Attendance already submitted for this class/date',
+                'locked' => true,
+                'editable_until' => null,
+            ], 409);
         }
 
         $classId = (int) $session->class_id;
@@ -359,24 +418,13 @@ class PublicTakeAttendanceController extends Controller
 
     protected function isSessionLocked(AttSession $session): bool
     {
-        if (($session->workflow_status ?? 'draft') !== 'submitted') {
-            return false;
-        }
-        if (!$session->submitted_at) {
-            return true;
-        }
-        return now()->greaterThan($session->submitted_at->copy()->addDays(self::SUBMISSION_EDIT_DAYS));
+        // In public take-attendance flow, once a session is submitted it is locked
+        // to prevent "taking attendance twice" for the same class/date.
+        return (($session->workflow_status ?? 'draft') === 'submitted');
     }
 
     protected function editableUntil(AttSession $session): ?Carbon
     {
-        if (($session->workflow_status ?? 'draft') !== 'submitted') {
-            return null;
-        }
-        if (!$session->submitted_at) {
-            return null;
-        }
-        return $session->submitted_at->copy()->addDays(self::SUBMISSION_EDIT_DAYS);
+        return null;
     }
 }
-

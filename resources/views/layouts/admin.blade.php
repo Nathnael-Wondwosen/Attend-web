@@ -160,9 +160,7 @@
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.attendance') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.attendance') }}">
                     <i class="fas fa-calendar-check"></i><span class="nav-label">Attendance</span>
                 </a>
-                <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition" href="#">
-                    <i class="fas fa-bell"></i><span class="nav-label">Alerts</span>
-                </a>
+                {{-- Alerts temporarily removed from sidebar --}}
                 <a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition {{ request()->routeIs('admin.reports') ? 'bg-white/10 text-white shadow-ring' : '' }}" href="{{ route('admin.reports') }}">
                     <i class="fas fa-file-export"></i><span class="nav-label">Reports</span>
                 </a>

@@ -40,6 +40,13 @@ RateLimiter::for('scan', function (Request $request) {
     ];
 });
 
+RateLimiter::for('take', function (Request $request) {
+    // Public take-attendance endpoints can be hit without auth (by design in this project right now).
+    // Keep a reasonable per-IP limit to prevent accidental or malicious flooding.
+    $ip = (string) $request->ip();
+    return Limit::perMinute(240)->by("take:ip:{$ip}");
+});
+
 Route::prefix('v1')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('teacher/login', [TeacherAuthController::class, 'login'])->middleware('throttle:auth');
@@ -47,13 +54,15 @@ Route::prefix('v1')->group(function () {
     // Public take-attendance flow (no login, but requires a secure admin-generated token).
     Route::prefix('public')->group(function () {
         Route::prefix('v1')->group(function () {
-            Route::get('me', [PublicTakeAttendanceController::class, 'me']);
-            Route::get('classes', [PublicTakeAttendanceController::class, 'classes']);
-            Route::get('classes/{class}/sessions', [PublicTakeAttendanceController::class, 'index']);
-            Route::post('classes/{class}/sessions', [PublicTakeAttendanceController::class, 'open']);
-            Route::get('sessions/{session}/students', [PublicTakeAttendanceController::class, 'roster']);
-            Route::patch('sessions/{session}/students', [PublicTakeAttendanceController::class, 'batchUpsertStatus']);
-            Route::post('sessions/{session}/close', [PublicTakeAttendanceController::class, 'close']);
+            Route::middleware('throttle:take')->group(function () {
+                Route::get('me', [PublicTakeAttendanceController::class, 'me']);
+                Route::get('classes', [PublicTakeAttendanceController::class, 'classes']);
+                Route::get('classes/{class}/sessions', [PublicTakeAttendanceController::class, 'index']);
+                Route::post('classes/{class}/sessions', [PublicTakeAttendanceController::class, 'open']);
+                Route::get('sessions/{session}/students', [PublicTakeAttendanceController::class, 'roster']);
+                Route::patch('sessions/{session}/students', [PublicTakeAttendanceController::class, 'batchUpsertStatus']);
+                Route::post('sessions/{session}/close', [PublicTakeAttendanceController::class, 'close']);
+            });
         });
     });
 
@@ -109,6 +118,7 @@ Route::prefix('v1')->group(function () {
         Route::get('reports/class/{class}/day', [ReportController::class, 'classDay']);
         Route::get('reports/class/{class}/range', [ReportController::class, 'classRange']);
         Route::get('reports/class/{class}/trend', [ReportController::class, 'classTrend']);
+        Route::get('reports/student/{student}/detail', [ReportController::class, 'studentDetail']);
         
         // advanced analytics
         Route::get('analytics/dashboard', [AdvancedAnalyticsController::class, 'dashboard']);
