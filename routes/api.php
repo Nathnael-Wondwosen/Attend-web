@@ -82,6 +82,8 @@ Route::prefix('v1')->group(function () {
         Route::prefix('mobile/v1')->middleware('throttle:mobile')->group(function () {
             Route::get('snapshot', [MobileSyncController::class, 'snapshot']);
             Route::post('sync', [MobileSyncController::class, 'sync']);
+            Route::get('sessions', [MobileSyncController::class, 'sessions']);
+            Route::delete('sessions/{session}', [MobileSyncController::class, 'deleteSession']);
         });
 
         // Admin: manage teacher login accounts (attendance owned)

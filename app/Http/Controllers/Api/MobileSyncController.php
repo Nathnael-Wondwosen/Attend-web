@@ -13,6 +13,7 @@ use Illuminate\Validation\Rule;
 class MobileSyncController extends Controller
 {
     protected const STATUSES = ['present', 'absent', 'permission'];
+    protected const SUBMISSION_EDIT_DAYS = 7;
 
     public function snapshot(Request $request)
     {
@@ -207,13 +208,15 @@ class MobileSyncController extends Controller
                 /** @var AttSession|null $session */
                 $session = AttSession::where('class_id', $classId)->where('attendance_date', $attendanceDate)->lockForUpdate()->first();
 
-                if ($session && (($session->workflow_status ?? 'draft') === 'submitted')) {
+                if ($session && $this->isSessionLocked($session)) {
                     $out = [
                         'client_session_id' => $clientSessionId,
                         'status' => 'conflict',
                         'code' => 409,
-                        'message' => 'Attendance already submitted for this class/date',
+                        'message' => 'Attendance is locked',
                         'session_id' => (int) $session->id,
+                        'workflow_status' => (string) ($session->workflow_status ?? 'draft'),
+                        'editable_until' => $this->editableUntil($session)?->toISOString(),
                     ];
                     $this->recordSync($user->id, $classId, $attendanceDate, $deviceId, $clientSessionId, $payloadHash, (int) $session->id, $out);
                     return $out;
@@ -261,7 +264,7 @@ class MobileSyncController extends Controller
                     $updatedCount = count($rows);
                 }
 
-                if ($submit) {
+                if ($submit && (($session->workflow_status ?? 'draft') !== 'submitted')) {
                     // Insert missing as absent (active roster only).
                     $memberIds = DB::table('class_enrollments')
                         ->where('class_id', $classId)
@@ -316,6 +319,8 @@ class MobileSyncController extends Controller
                     'code' => 200,
                     'session_id' => (int) $session->id,
                     'workflow_status' => (string) ($session->workflow_status ?? 'draft'),
+                    'locked' => $this->isSessionLocked($session),
+                    'editable_until' => $this->editableUntil($session)?->toISOString(),
                     'updated' => $updatedCount,
                     'submitted' => $submit ? true : false,
                 ];
@@ -332,6 +337,124 @@ class MobileSyncController extends Controller
             'synced_at' => now()->toISOString(),
             'count' => count($responses),
             'results' => $responses,
+        ]);
+    }
+
+    public function sessions(Request $request)
+    {
+        $user = $request->user();
+        if (!$user instanceof AttTeacherAccount) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $data = $request->validate([
+            'class_id' => ['nullable', 'integer'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'mine' => ['nullable', 'boolean'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $limit = (int) ($data['limit'] ?? 50);
+        $mine = (bool) ($data['mine'] ?? true);
+
+        $allowedClassIds = $this->teacherAllClassIds((int) $user->teacher_id);
+        if (empty($allowedClassIds)) {
+            return response()->json(['data' => []]);
+        }
+
+        $q = DB::table('att_sessions as s')
+            ->whereIn('s.class_id', $allowedClassIds)
+            ->orderByDesc('s.attendance_date')
+            ->orderByDesc('s.id');
+
+        if (isset($data['class_id'])) {
+            $cid = (int) $data['class_id'];
+            $allowedSet = array_fill_keys($allowedClassIds, true);
+            if (!isset($allowedSet[(int) $cid])) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
+            $q->where('s.class_id', $cid);
+        }
+
+        if (!empty($data['from'])) {
+            $q->where('s.attendance_date', '>=', Carbon::parse($data['from'])->toDateString());
+        }
+        if (!empty($data['to'])) {
+            $q->where('s.attendance_date', '<=', Carbon::parse($data['to'])->toDateString());
+        }
+        if ($mine) {
+            $q->where('s.started_by', (int) $user->teacher_id);
+        }
+
+        $rows = $q->limit($limit)->get([
+            's.id',
+            's.class_id',
+            's.attendance_date',
+            's.workflow_status',
+            's.submitted_at',
+            's.started_by',
+        ])->map(function ($r) {
+            $workflow = (string) ($r->workflow_status ?? 'draft');
+            $submittedAt = $r->submitted_at ? Carbon::parse($r->submitted_at) : null;
+            $locked = false;
+            $editableUntil = null;
+            if ($workflow === 'submitted') {
+                if (!$submittedAt) {
+                    $locked = true;
+                } else {
+                    $editableUntil = $submittedAt->copy()->addDays(self::SUBMISSION_EDIT_DAYS);
+                    $locked = now()->greaterThan($editableUntil);
+                }
+            }
+            return [
+                'id' => (int) $r->id,
+                'class_id' => (int) $r->class_id,
+                'attendance_date' => (string) $r->attendance_date,
+                'workflow_status' => $workflow,
+                'submitted_at' => $submittedAt ? $submittedAt->toISOString() : null,
+                'locked' => $locked,
+                'editable_until' => $editableUntil ? $editableUntil->toISOString() : null,
+            ];
+        })->values();
+
+        return response()->json([
+            'data' => $rows,
+        ]);
+    }
+
+    public function deleteSession(Request $request, int $sessionId)
+    {
+        $user = $request->user();
+        if (!$user instanceof AttTeacherAccount) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $session = AttSession::findOrFail($sessionId);
+        $allowedSet = array_fill_keys($this->teacherAllowedClassIds((int) $user->teacher_id, [(int) $session->class_id]), true);
+        if (!isset($allowedSet[(int) $session->class_id])) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        // Only allow deleting sessions created by this teacher account (prevents nuking other teacher/admin work).
+        if ((int) ($session->started_by ?? 0) !== (int) $user->teacher_id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        if ($this->isSessionLocked($session)) {
+            return response()->json(['message' => 'Attendance is locked'], 423);
+        }
+
+        DB::transaction(function () use ($sessionId) {
+            DB::table('att_attendance')->where('session_id', $sessionId)->delete();
+            DB::table('att_audit_logs')->where('session_id', $sessionId)->delete();
+            DB::table('att_session_tokens')->where('session_id', $sessionId)->delete();
+            DB::table('att_sessions')->where('id', $sessionId)->delete();
+        });
+
+        return response()->json([
+            'message' => 'deleted',
+            'session_id' => (int) $sessionId,
         ]);
     }
 
@@ -387,5 +510,50 @@ class MobileSyncController extends Controller
 
         return $assigned;
     }
-}
 
+    protected function teacherAllClassIds(int $teacherId): array
+    {
+        // Used to constrain queries to teacher's scope without needing a separate endpoint.
+        return DB::table('classes as c')
+            ->where(function ($w) use ($teacherId) {
+                $w->whereExists(function ($sub) use ($teacherId) {
+                    $sub->selectRaw('1')
+                        ->from('att_teacher_class_assignments as tca')
+                        ->whereColumn('tca.class_id', 'c.id')
+                        ->where('tca.teacher_id', $teacherId)
+                        ->where('tca.is_active', 1);
+                })->orWhereExists(function ($sub) use ($teacherId) {
+                    $sub->selectRaw('1')
+                        ->from('class_teachers as ct')
+                        ->whereColumn('ct.class_id', 'c.id')
+                        ->where('ct.teacher_id', $teacherId)
+                        ->where('ct.is_active', 1);
+                })->orWhere('c.teacher_id', $teacherId);
+            })
+            ->pluck('c.id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+    }
+
+    protected function isSessionLocked(AttSession $session): bool
+    {
+        if (($session->workflow_status ?? 'draft') !== 'submitted') {
+            return false;
+        }
+        if (!$session->submitted_at) {
+            return true;
+        }
+        return now()->greaterThan(Carbon::parse($session->submitted_at)->addDays(self::SUBMISSION_EDIT_DAYS));
+    }
+
+    protected function editableUntil(AttSession $session): ?Carbon
+    {
+        if (($session->workflow_status ?? 'draft') !== 'submitted') {
+            return null;
+        }
+        if (!$session->submitted_at) {
+            return null;
+        }
+        return Carbon::parse($session->submitted_at)->addDays(self::SUBMISSION_EDIT_DAYS);
+    }
+}
