@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AdvancedAnalyticsController;
 use App\Http\Controllers\Api\TeacherAuthController;
 use App\Http\Controllers\Api\TeacherAccountController;
 use App\Http\Controllers\Api\TeacherDataController;
+use App\Http\Controllers\Api\MobileSyncController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\TakeTokenController;
 use App\Http\Controllers\Api\PublicTakeAttendanceController;
@@ -47,6 +48,12 @@ RateLimiter::for('take', function (Request $request) {
     return Limit::perMinute(240)->by("take:ip:{$ip}");
 });
 
+RateLimiter::for('mobile', function (Request $request) {
+    $u = $request->user();
+    $key = $u ? ('mobile:user:'.$u->getAuthIdentifier()) : ('mobile:ip:'.$request->ip());
+    return Limit::perMinute(240)->by($key);
+});
+
 Route::prefix('v1')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('teacher/login', [TeacherAuthController::class, 'login'])->middleware('throttle:auth');
@@ -72,6 +79,10 @@ Route::prefix('v1')->group(function () {
 
         // Teacher: minimal endpoints for mobile app
         Route::get('teacher/classes', [TeacherDataController::class, 'classes']);
+        Route::prefix('mobile/v1')->middleware('throttle:mobile')->group(function () {
+            Route::get('snapshot', [MobileSyncController::class, 'snapshot']);
+            Route::post('sync', [MobileSyncController::class, 'sync']);
+        });
 
         // Admin: manage teacher login accounts (attendance owned)
         Route::get('teacher-accounts', [TeacherAccountController::class, 'index']);
