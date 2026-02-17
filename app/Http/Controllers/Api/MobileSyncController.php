@@ -59,8 +59,18 @@ class MobileSyncController extends Controller
         // Roster snapshot: active enrollments only.
         $rosters = [];
         if (!empty($classIds)) {
+            $parentPhones = DB::table('parents as p')
+                ->selectRaw('p.student_id, MIN(p.id) as min_parent_id')
+                ->whereNotNull('p.phone_number')
+                ->whereRaw("TRIM(p.phone_number) <> ''")
+                ->groupBy('p.student_id');
+
             $rows = DB::table('class_enrollments as ce')
                 ->join('students as s', 's.id', '=', 'ce.student_id')
+                ->leftJoinSub($parentPhones, 'pp', function ($join) {
+                    $join->on('pp.student_id', '=', 's.id');
+                })
+                ->leftJoin('parents as p', 'p.id', '=', 'pp.min_parent_id')
                 ->whereIn('ce.class_id', $classIds)
                 ->where('ce.status', 'active')
                 ->orderBy('s.full_name')
@@ -70,6 +80,8 @@ class MobileSyncController extends Controller
                     's.full_name',
                     's.gender',
                     's.current_grade',
+                    DB::raw("COALESCE(NULLIF(TRIM(s.phone_number), ''), NULLIF(TRIM(p.phone_number), '')) as phone_number"),
+                    DB::raw("CASE WHEN NULLIF(TRIM(s.phone_number), '') IS NOT NULL THEN 'student' WHEN NULLIF(TRIM(p.phone_number), '') IS NOT NULL THEN 'parent' ELSE 'none' END as phone_source"),
                 ]);
 
             foreach ($rows as $r) {
@@ -82,6 +94,9 @@ class MobileSyncController extends Controller
                     'full_name' => (string) $r->full_name,
                     'gender' => $r->gender,
                     'current_grade' => $r->current_grade,
+                    'phone_number' => $r->phone_number ? (string) $r->phone_number : null,
+                    'phone_source' => (string) ($r->phone_source ?? 'none'),
+                    'has_phone' => !empty($r->phone_number),
                 ];
             }
         }
