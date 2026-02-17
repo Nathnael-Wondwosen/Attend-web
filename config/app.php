@@ -28,6 +28,9 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    // Ops helper key for /run endpoint (kept in config for config:cache compatibility).
+    'ops_run_key' => env('OPS_RUN_KEY', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode

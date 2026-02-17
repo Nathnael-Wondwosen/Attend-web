@@ -8,12 +8,14 @@ use App\Models\AttTeacherAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class MobileSyncController extends Controller
 {
     protected const STATUSES = ['present', 'absent', 'permission'];
     protected const SUBMISSION_EDIT_DAYS = 7;
+    protected array $columnCache = [];
 
     public function snapshot(Request $request)
     {
@@ -118,6 +120,7 @@ class MobileSyncController extends Controller
 
         $deviceId = isset($data['device_id']) ? trim((string) $data['device_id']) : null;
         $items = $data['items'];
+        $syncLedgerAvailable = Schema::hasTable('att_mobile_sync');
 
         // Pre-check class assignment for all items.
         $classIds = collect($items)->pluck('class_id')->unique()->values()->map(fn ($v) => (int) $v)->all();
@@ -158,7 +161,9 @@ class MobileSyncController extends Controller
             ];
             $payloadHash = hash('sha256', json_encode($norm, JSON_UNESCAPED_SLASHES));
 
-            $existingSync = DB::table('att_mobile_sync')->where('client_session_id', $clientSessionId)->first();
+            $existingSync = $syncLedgerAvailable
+                ? DB::table('att_mobile_sync')->where('client_session_id', $clientSessionId)->first()
+                : null;
             if ($existingSync) {
                 if ((string) $existingSync->payload_hash !== $payloadHash) {
                     $responses[] = [
@@ -206,7 +211,13 @@ class MobileSyncController extends Controller
 
             $res = DB::transaction(function () use ($user, $classId, $attendanceDate, $submit, $updates, $deviceId, $clientSessionId, $payloadHash) {
                 /** @var AttSession|null $session */
-                $session = AttSession::where('class_id', $classId)->where('attendance_date', $attendanceDate)->lockForUpdate()->first();
+                $sessionQuery = AttSession::where('class_id', $classId);
+                if ($this->hasTableColumn('att_sessions', 'attendance_date')) {
+                    $sessionQuery->where('attendance_date', $attendanceDate);
+                } else {
+                    $sessionQuery->whereDate('started_at', $attendanceDate);
+                }
+                $session = $sessionQuery->lockForUpdate()->first();
 
                 if ($session && $this->isSessionLocked($session)) {
                     $out = [
@@ -223,7 +234,7 @@ class MobileSyncController extends Controller
                 }
 
                 if (!$session) {
-                    $session = AttSession::create([
+                    $sessionPayload = [
                         'class_id' => $classId,
                         'attendance_date' => $attendanceDate,
                         'academic_year' => null,
@@ -234,7 +245,9 @@ class MobileSyncController extends Controller
                         'notes' => null,
                         'current_token' => null,
                         'token_expires_at' => null,
-                    ]);
+                    ];
+
+                    $session = AttSession::create($this->filterToExistingColumns('att_sessions', $sessionPayload));
                 }
 
                 $updatedCount = 0;
@@ -242,7 +255,7 @@ class MobileSyncController extends Controller
                     $now = now();
                     $rows = collect($updates)->map(function ($u) use ($session, $classId, $now, $user) {
                         $markedAt = isset($u['marked_at']) ? Carbon::parse($u['marked_at']) : $now;
-                        return [
+                        return $this->filterToExistingColumns('att_attendance', [
                             'session_id' => (int) $session->id,
                             'class_id' => $classId,
                             'student_id' => (int) $u['student_id'],
@@ -253,14 +266,14 @@ class MobileSyncController extends Controller
                             'marked_at' => $markedAt,
                             'created_at' => $now,
                             'updated_at' => $now,
-                        ];
+                        ]);
                     })->all();
 
-                    DB::table('att_attendance')->upsert(
-                        $rows,
-                        ['session_id', 'student_id'],
-                        ['class_id', 'status', 'method', 'marked_by', 'note', 'marked_at', 'updated_at']
-                    );
+                    $updateCols = array_values(array_filter(
+                        ['class_id', 'status', 'method', 'marked_by', 'note', 'marked_at', 'updated_at'],
+                        fn ($col) => $this->hasTableColumn('att_attendance', $col)
+                    ));
+                    $this->upsertAttendanceRows($rows, $updateCols);
                     $updatedCount = count($rows);
                 }
 
@@ -300,17 +313,21 @@ class MobileSyncController extends Controller
                             }
                         }
                         if (!empty($missing)) {
-                            DB::table('att_attendance')->insertOrIgnore($missing);
+                            $missing = array_map(
+                                fn ($row) => $this->filterToExistingColumns('att_attendance', $row),
+                                $missing
+                            );
+                            $this->insertAttendanceRows($missing);
                         }
                     }
 
-                    $session->update([
+                    $session->update($this->filterToExistingColumns('att_sessions', [
                         'workflow_status' => 'submitted',
                         'submitted_at' => now(),
                         'submitted_by' => (int) $user->teacher_id,
                         'status' => 'closed',
                         'closed_at' => now(),
-                    ]);
+                    ]));
                 }
 
                 $out = [
@@ -351,22 +368,42 @@ class MobileSyncController extends Controller
             'class_id' => ['nullable', 'integer'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
-            'mine' => ['nullable', 'boolean'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $limit = (int) ($data['limit'] ?? 50);
-        $mine = (bool) ($data['mine'] ?? true);
+        $mineRaw = $request->query('mine', $request->input('mine', '1'));
+        if (is_bool($mineRaw)) {
+            $mine = $mineRaw;
+        } else {
+            $norm = strtolower(trim((string) $mineRaw));
+            if (in_array($norm, ['1', 'true', 'yes', 'on'], true)) {
+                $mine = true;
+            } elseif (in_array($norm, ['0', 'false', 'no', 'off'], true)) {
+                $mine = false;
+            } else {
+                $mine = true;
+            }
+        }
 
         $allowedClassIds = $this->teacherAllClassIds((int) $user->teacher_id);
         if (empty($allowedClassIds)) {
             return response()->json(['data' => []]);
         }
 
+        $hasAttendanceDate = $this->hasTableColumn('att_sessions', 'attendance_date');
+        $hasWorkflowStatus = $this->hasTableColumn('att_sessions', 'workflow_status');
+        $hasSubmittedAt = $this->hasTableColumn('att_sessions', 'submitted_at');
+
         $q = DB::table('att_sessions as s')
-            ->whereIn('s.class_id', $allowedClassIds)
-            ->orderByDesc('s.attendance_date')
-            ->orderByDesc('s.id');
+            ->whereIn('s.class_id', $allowedClassIds);
+
+        if ($hasAttendanceDate) {
+            $q->orderByDesc('s.attendance_date');
+        } else {
+            $q->orderByDesc('s.started_at');
+        }
+        $q->orderByDesc('s.id');
 
         if (isset($data['class_id'])) {
             $cid = (int) $data['class_id'];
@@ -378,23 +415,47 @@ class MobileSyncController extends Controller
         }
 
         if (!empty($data['from'])) {
-            $q->where('s.attendance_date', '>=', Carbon::parse($data['from'])->toDateString());
+            $from = Carbon::parse($data['from'])->toDateString();
+            if ($hasAttendanceDate) {
+                $q->where('s.attendance_date', '>=', $from);
+            } else {
+                $q->whereDate('s.started_at', '>=', $from);
+            }
         }
         if (!empty($data['to'])) {
-            $q->where('s.attendance_date', '<=', Carbon::parse($data['to'])->toDateString());
+            $to = Carbon::parse($data['to'])->toDateString();
+            if ($hasAttendanceDate) {
+                $q->where('s.attendance_date', '<=', $to);
+            } else {
+                $q->whereDate('s.started_at', '<=', $to);
+            }
         }
         if ($mine) {
             $q->where('s.started_by', (int) $user->teacher_id);
         }
 
-        $rows = $q->limit($limit)->get([
+        $selects = [
             's.id',
             's.class_id',
-            's.attendance_date',
-            's.workflow_status',
-            's.submitted_at',
             's.started_by',
-        ])->map(function ($r) {
+        ];
+        if ($hasAttendanceDate) {
+            $selects[] = 's.attendance_date';
+        } else {
+            $selects[] = DB::raw('DATE(s.started_at) as attendance_date');
+        }
+        if ($hasWorkflowStatus) {
+            $selects[] = 's.workflow_status';
+        } else {
+            $selects[] = DB::raw("'draft' as workflow_status");
+        }
+        if ($hasSubmittedAt) {
+            $selects[] = 's.submitted_at';
+        } else {
+            $selects[] = DB::raw('NULL as submitted_at');
+        }
+
+        $rows = $q->limit($limit)->get($selects)->map(function ($r) {
             $workflow = (string) ($r->workflow_status ?? 'draft');
             $submittedAt = $r->submitted_at ? Carbon::parse($r->submitted_at) : null;
             $locked = false;
@@ -468,18 +529,100 @@ class MobileSyncController extends Controller
         ?int $sessionId,
         array $result
     ): void {
-        DB::table('att_mobile_sync')->insert([
-            'teacher_account_id' => $teacherAccountId,
-            'session_id' => $sessionId,
-            'class_id' => $classId,
-            'attendance_date' => $attendanceDate,
-            'device_id' => $deviceId,
-            'client_session_id' => $clientSessionId,
-            'payload_hash' => $payloadHash,
-            'result_json' => json_encode($result, JSON_UNESCAPED_SLASHES),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Sync ledger table is optional for backwards compatibility with
+        // deployments that missed this migration. Attendance sync must still work.
+        if (!Schema::hasTable('att_mobile_sync')) {
+            return;
+        }
+
+        try {
+            DB::table('att_mobile_sync')->insert([
+                'teacher_account_id' => $teacherAccountId,
+                'session_id' => $sessionId,
+                'class_id' => $classId,
+                'attendance_date' => $attendanceDate,
+                'device_id' => $deviceId,
+                'client_session_id' => $clientSessionId,
+                'payload_hash' => $payloadHash,
+                'result_json' => json_encode($result, JSON_UNESCAPED_SLASHES),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            // Never fail sync because ledger logging failed.
+        }
+    }
+
+    protected function upsertAttendanceRows(array $rows, array $updateCols): void
+    {
+        if (empty($rows)) {
+            return;
+        }
+
+        try {
+            DB::table('att_attendance')->upsert($rows, ['session_id', 'student_id'], $updateCols);
+        } catch (\Throwable $e) {
+            // Backward-compat for older enum values that use "excused" instead of "permission".
+            $fallback = array_map(function ($r) {
+                if (($r['status'] ?? null) === 'permission') {
+                    $r['status'] = 'excused';
+                }
+                return $r;
+            }, $rows);
+            DB::table('att_attendance')->upsert($fallback, ['session_id', 'student_id'], $updateCols);
+        }
+    }
+
+    protected function insertAttendanceRows(array $rows): void
+    {
+        if (empty($rows)) {
+            return;
+        }
+
+        try {
+            DB::table('att_attendance')->insertOrIgnore($rows);
+        } catch (\Throwable $e) {
+            // Backward-compat for older enum values that use "excused" instead of "permission".
+            $fallback = array_map(function ($r) {
+                if (($r['status'] ?? null) === 'permission') {
+                    $r['status'] = 'excused';
+                }
+                return $r;
+            }, $rows);
+            DB::table('att_attendance')->insertOrIgnore($fallback);
+        }
+    }
+
+    protected function filterToExistingColumns(string $table, array $payload): array
+    {
+        $out = [];
+        foreach ($payload as $column => $value) {
+            if ($this->hasTableColumn($table, (string) $column)) {
+                $out[$column] = $value;
+            }
+        }
+        return $out;
+    }
+
+    protected function hasTableColumn(string $table, string $column): bool
+    {
+        if (!isset($this->columnCache[$table])) {
+            if (!Schema::hasTable($table)) {
+                $this->columnCache[$table] = [];
+            } else {
+                try {
+                    $this->columnCache[$table] = Schema::getColumnListing($table);
+                } catch (\Throwable $e) {
+                    $this->columnCache[$table] = [];
+                }
+            }
+        }
+
+        if (!empty($this->columnCache[$table])) {
+            return in_array($column, $this->columnCache[$table], true);
+        }
+
+        return Schema::hasTable($table) && Schema::hasColumn($table, $column);
     }
 
     protected function teacherAllowedClassIds(int $teacherId, array $classIds): array

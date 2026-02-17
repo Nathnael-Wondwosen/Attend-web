@@ -1,59 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## Finoteselam Attendance (Web)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 (PHP 8.2+) web app for managing and taking school attendance.
 
-## About Laravel
+### Key Features
+- Admin UI (dashboard, classes, students, attendance, reports)
+- Teacher UI for taking attendance
+- "Public take attendance" flow (token-based, no login for the teacher)
+- REST API under `/api/v1` secured with Laravel Sanctum (plus a separate public namespace)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
+- PHP `^8.2`, Laravel `^12`
+- MySQL (recommended for production) or SQLite (easy local dev)
+- Node.js + Vite (asset build pipeline)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
+- PHP `8.2+`
+- Composer `2.x`
+- Node.js `18+` (or `20+`) + npm
+- A database (MySQL recommended; SQLite supported for local)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Quick Start (Local)
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
 
-## Learning Laravel
+# Choose ONE database option:
+# 1) SQLite (simple local)
+touch database/database.sqlite
+# If you're on Windows without `touch`:
+# php -r "file_put_contents('database/database.sqlite','');"
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# 2) MySQL
+# Update DB_* in .env
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+php artisan migrate
+npm install
+npm run build
 
-## Laravel Sponsors
+php artisan serve
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Dev Mode (runs Laravel + Vite watcher)
+This repo includes a composer script:
+```bash
+composer run dev
+```
 
-### Premium Partners
+## Important URLs
+- Web
+  - `/` redirects to `/login`
+  - `/login` admin login page
+  - `/teacher/login` teacher login page
+  - `/takeattendance` take attendance UI
+  - `/admin` admin dashboard
+- API
+  - Auth: `POST /api/v1/login`, `POST /api/v1/teacher/login`
+  - Me: `GET /api/v1/me`
+  - Public take-attendance: `/api/v1/public/v1/*`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Environment (.env)
+Start from `.env.example`.
 
-## Contributing
+Notes:
+- Do not add stray lines (example: a single `S` line).
+- Do not put inline comments after values like `DB_HOST=127.0.0.1 # comment`. Put comments on their own `#` line.
+- If you use database-backed drivers, you must run migrations:
+  - `SESSION_DRIVER=database`
+  - `CACHE_STORE=database`
+  - `QUEUE_CONNECTION=database`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Production Deployment
+### Standard Linux/VPS
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+npm ci
+npm run build
+```
 
-## Code of Conduct
+### cPanel Notes (Common Failure Points)
+- The domain document root must point to the Laravel `public/` directory (recommended).
+- PHP must be `8.2+` (MultiPHP Manager).
+- `storage/` and `bootstrap/cache/` must be writable by PHP.
+- `vendor/` must exist on the server:
+  - If you do not have terminal access, upload `vendor/` from your local build OR ask the host/admin to run Composer.
+- If you use Vite-built assets, ensure `public/build/manifest.json` exists (run `npm run build` before upload).
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Troubleshooting
+### 500 Internal Server Error
+Common causes:
+- Missing `vendor/` (Laravel can't `require ../vendor/autoload.php`)
+- Wrong PHP version (< 8.2)
+- Permissions on `storage/` or `bootstrap/cache/`
+- Invalid `.env` formatting
+- Using `CACHE_STORE=database` / `SESSION_DRIVER=database` without migrations
 
-## Security Vulnerabilities
+Check:
+- Server error logs (cPanel: `Metrics -> Errors`)
+- `storage/logs/laravel.log`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 404 Page Not Found (not Laravel)
+Usually means the domain is not pointing to `public/` or rewrites are not enabled. Verify the domain's document root and `.htaccess`.
+
+## Security
+- Never commit a real `.env` with credentials.
+- Rotate any credentials that were shared publicly.
 
 ## License
+Proprietary (update this section if you intend to open-source).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

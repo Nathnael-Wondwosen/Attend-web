@@ -295,6 +295,7 @@ class SessionController extends Controller
                 'aa.status as attendance_status',
                 'aa.method',
                 'aa.marked_at',
+                'aa.note',
             ]);
 
         return [

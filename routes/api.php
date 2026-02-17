@@ -79,6 +79,7 @@ Route::prefix('v1')->group(function () {
 
         // Teacher: minimal endpoints for mobile app
         Route::get('teacher/classes', [TeacherDataController::class, 'classes']);
+        Route::get('teacher/classes/{class}/students', [TeacherDataController::class, 'students']);
         Route::prefix('mobile/v1')->middleware('throttle:mobile')->group(function () {
             Route::get('snapshot', [MobileSyncController::class, 'snapshot']);
             Route::post('sync', [MobileSyncController::class, 'sync']);

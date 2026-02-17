@@ -8,10 +8,36 @@ use Illuminate\Support\Facades\File;
 
 class OpsController extends Controller
 {
+    protected function opsRunKey(): string
+    {
+        // `env()` is unreliable at runtime after config cache.
+        // Prefer config, then process env vars as fallback.
+        $fromConfig = config('app.ops_run_key');
+        if (is_string($fromConfig) && trim($fromConfig) !== '') {
+            return trim($fromConfig);
+        }
+
+        foreach (['OPS_RUN_KEY'] as $name) {
+            $v = getenv($name);
+            if (is_string($v) && trim($v) !== '') {
+                return trim($v);
+            }
+            if (isset($_ENV[$name]) && is_string($_ENV[$name]) && trim($_ENV[$name]) !== '') {
+                return trim($_ENV[$name]);
+            }
+            if (isset($_SERVER[$name]) && is_string($_SERVER[$name]) && trim($_SERVER[$name]) !== '') {
+                return trim($_SERVER[$name]);
+            }
+        }
+
+        $fromEnv = env('OPS_RUN_KEY', '');
+        return is_string($fromEnv) ? trim($fromEnv) : '';
+    }
+
     public function index(Request $request)
     {
         // Hide the endpoint entirely unless a key is configured.
-        $key = (string) env('OPS_RUN_KEY', '');
+        $key = $this->opsRunKey();
         if ($key === '') {
             abort(404);
         }
@@ -29,7 +55,7 @@ class OpsController extends Controller
 
     public function run(Request $request)
     {
-        $key = (string) env('OPS_RUN_KEY', '');
+        $key = $this->opsRunKey();
         if ($key === '') {
             abort(404);
         }

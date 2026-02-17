@@ -1,0 +1,9 @@
+DirectoryIndex public/index.php index.php index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Send everything into /public
+    RewriteCond %{REQUEST_URI} !^/public/ [NC]
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
