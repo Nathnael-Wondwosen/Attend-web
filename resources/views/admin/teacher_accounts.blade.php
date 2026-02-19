@@ -128,7 +128,7 @@
         try {
             const d = new Date(iso);
             if (Number.isNaN(d.getTime())) return String(iso);
-            return d.toLocaleString();
+            return window.FinotDate ? window.FinotDate.formatDateTime(iso) : d.toLocaleString();
         } catch {
             return String(iso);
         }
@@ -524,5 +524,7 @@
 
     // init
     Promise.all([loadTeachers(), loadClasses(), loadAccounts()]).catch(() => setError('Failed to load data'));
+    document.addEventListener('finot:dateprefs', () => render());
 </script>
 @endpush
+

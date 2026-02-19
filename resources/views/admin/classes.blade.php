@@ -358,7 +358,7 @@
         recentWrap.innerHTML = rows.slice(0, 12).map(r => `
             <div class="glass rounded-xl px-3 py-2 border border-white/5 flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-white text-sm">${r.attendance_date || '—'}</p>
+                    <p class="text-white text-sm">${(window.FinotDate && r.attendance_date) ? window.FinotDate.formatDate(r.attendance_date) : (r.attendance_date || '—')}</p>
                     <p class="text-xs text-slate-400">${r.workflow_status === 'submitted' ? 'Submitted' : 'Draft'}${r.note ? ` • ${r.note}` : ''}</p>
                 </div>
                 ${pill(r.status)}
@@ -447,8 +447,10 @@
     document.getElementById('class-sort')?.addEventListener('change', applyClassFilter);
     document.getElementById('classes-refresh')?.addEventListener('click', loadClasses);
     document.getElementById('student-search')?.addEventListener('input', applyStudentFilter);
+    document.addEventListener('finot:dateprefs', () => {
+        renderStudentDetail();
+    });
 
     loadClasses();
 </script>
 @endpush
-

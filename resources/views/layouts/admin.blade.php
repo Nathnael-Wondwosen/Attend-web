@@ -59,6 +59,120 @@
             options.headers = headers;
             return originalFetch(url, options);
         };
+
+        // Global ET/GR date utility (UI-only; backend remains Gregorian).
+        window.FinotDate = (() => {
+            const TZ = 'Africa/Addis_Ababa';
+            const KEYS = {
+                calendarMode: 'finot_calendar_mode', // et_gr | et | gr
+                inputMode: 'finot_date_input_mode',   // et | gr
+                etMonthLang: 'finot_et_month_lang',   // en | am
+            };
+
+            const getCalendarMode = () => localStorage.getItem(KEYS.calendarMode) || 'et';
+            const getInputMode = () => localStorage.getItem(KEYS.inputMode) || 'et';
+            const getEtMonthLang = () => localStorage.getItem(KEYS.etMonthLang) || 'en';
+
+            const setCalendarMode = (v) => localStorage.setItem(KEYS.calendarMode, (v || 'et'));
+            const setInputMode = (v) => localStorage.setItem(KEYS.inputMode, (v || 'et'));
+            const setEtMonthLang = (v) => localStorage.setItem(KEYS.etMonthLang, (v || 'en'));
+
+            const parseYmdUtc = (ymd) => {
+                if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
+                const [y, m, d] = String(ymd).split('-').map(Number);
+                return new Date(Date.UTC(y, m - 1, d, 9, 0, 0));
+            };
+
+            const etDateFmt = new Intl.DateTimeFormat('en-ET-u-ca-ethiopic', {
+                timeZone: TZ,
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+            });
+
+            const grDateFmt = new Intl.DateTimeFormat('en-CA', {
+                timeZone: TZ,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            });
+
+            const etDateTimeFmt = new Intl.DateTimeFormat('en-ET-u-ca-ethiopic', {
+                timeZone: TZ,
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            const grDateTimeFmt = new Intl.DateTimeFormat('en-GB', {
+                timeZone: TZ,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+
+            const toEtDate = (ymd) => {
+                const dt = parseYmdUtc(ymd);
+                if (!dt) return '--';
+                return etDateFmt.format(dt);
+            };
+
+            const toGrDate = (ymd) => {
+                const dt = parseYmdUtc(ymd);
+                if (!dt) return '--';
+                return grDateFmt.format(dt).replaceAll('/', '-');
+            };
+
+            const formatDate = (ymd) => {
+                const mode = getCalendarMode();
+                const et = toEtDate(ymd);
+                const gr = toGrDate(ymd);
+                if (mode === 'et') return et;
+                if (mode === 'gr') return gr;
+                return `${et} | ${gr}`;
+            };
+
+            const formatDateTime = (iso) => {
+                if (!iso) return '--';
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return String(iso);
+                const mode = getCalendarMode();
+                const et = etDateTimeFmt.format(d);
+                const gr = grDateTimeFmt.format(d);
+                if (mode === 'et') return et;
+                if (mode === 'gr') return gr;
+                return `${et} | ${gr}`;
+            };
+
+            const formatRange = (fromYmd, toYmd, label = '') => {
+                const mode = getCalendarMode();
+                const et = `${toEtDate(fromYmd)} to ${toEtDate(toYmd)}`;
+                const gr = `${toGrDate(fromYmd)} to ${toGrDate(toYmd)}`;
+                let body = gr;
+                if (mode === 'et') body = et;
+                else if (mode === 'et_gr') body = `${et} | ${gr}`;
+                return label ? `${label} | ${body}` : body;
+            };
+
+            return {
+                keys: KEYS,
+                getCalendarMode,
+                getInputMode,
+                getEtMonthLang,
+                setCalendarMode,
+                setInputMode,
+                setEtMonthLang,
+                toEtDate,
+                toGrDate,
+                formatDate,
+                formatDateTime,
+                formatRange,
+            };
+        })();
     </script>
     <style>
         :root {
@@ -186,6 +300,19 @@
                     <p class="text-slate-400 text-sm mt-1 truncate sm:whitespace-normal">@yield('page-subtitle', '')</p>
                 </div>
                 <div class="flex items-center gap-2 md:gap-4 shrink-0">
+                    <div class="hidden xl:flex items-center gap-2 glass rounded-xl px-2 py-1.5 shadow-ring">
+                        <label for="global-input-mode" class="text-[11px] text-slate-400">Input</label>
+                        <select id="global-input-mode" class="h-8 rounded-md bg-white/5 border border-white/10 px-2 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="et">ET</option>
+                            <option value="gr">GR</option>
+                        </select>
+                        <label for="global-calendar-mode" class="text-[11px] text-slate-400">Cal</label>
+                        <select id="global-calendar-mode" class="h-8 rounded-md bg-white/5 border border-white/10 px-2 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="et">ET</option>
+                            <option value="et_gr">ET+GR</option>
+                            <option value="gr">GR</option>
+                        </select>
+                    </div>
                     <button id="mobile-menu-btn" type="button" class="h-11 w-11 rounded-xl glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring lg:hidden" aria-label="Open menu">
                         <i class="fas fa-bars"></i>
                     </button>
@@ -275,6 +402,31 @@
         const savedSidebar = localStorage.getItem('finot_sidebar');
         if (savedSidebar === 'collapsed') {
             root.classList.add('sidebar-collapsed');
+        }
+
+        // Global date preferences controls.
+        const globalCal = document.getElementById('global-calendar-mode');
+        const globalInput = document.getElementById('global-input-mode');
+        if (window.FinotDate) {
+            if (globalCal) globalCal.value = window.FinotDate.getCalendarMode();
+            if (globalInput) globalInput.value = window.FinotDate.getInputMode();
+
+            const emit = () => document.dispatchEvent(new CustomEvent('finot:dateprefs', {
+                detail: {
+                    calendar_mode: window.FinotDate.getCalendarMode(),
+                    input_mode: window.FinotDate.getInputMode(),
+                    et_month_lang: window.FinotDate.getEtMonthLang(),
+                }
+            }));
+
+            globalCal?.addEventListener('change', () => {
+                window.FinotDate.setCalendarMode(globalCal.value);
+                emit();
+            });
+            globalInput?.addEventListener('change', () => {
+                window.FinotDate.setInputMode(globalInput.value);
+                emit();
+            });
         }
     </script>
 </body>

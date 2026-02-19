@@ -1296,9 +1296,12 @@
     $('rep-month').value = String(now.getMonth() + 1);
     $('rep-term-plan').value = 't1';
     $('rep-period-type').value = 'year';
-    $('rep-date-input-mode').value = 'et';
-    $('rep-et-month-lang').value = 'en';
-    $('rep-calendar-mode').value = 'et';
+    const globalInputPref = window.FinotDate ? window.FinotDate.getInputMode() : 'et';
+    const globalCalPref = window.FinotDate ? window.FinotDate.getCalendarMode() : 'et';
+    const globalEtLabelPref = window.FinotDate ? window.FinotDate.getEtMonthLang() : 'en';
+    $('rep-date-input-mode').value = globalInputPref;
+    $('rep-et-month-lang').value = globalEtLabelPref;
+    $('rep-calendar-mode').value = globalCalPref;
 
     // Default custom range: last 30 days.
     const from = new Date(now);
@@ -1326,12 +1329,14 @@
     on('rep-month', 'change', renderPeriodControls);
     on('rep-month-et-year', 'change', renderPeriodControls);
     on('rep-date-input-mode', 'change', () => {
+        if (window.FinotDate) window.FinotDate.setInputMode($('rep-date-input-mode').value);
         renderMonthOptions();
         renderEtMonthYearOptions();
         renderPeriodControls();
         renderTermDefaultEditor();
     });
     on('rep-et-month-lang', 'change', () => {
+        if (window.FinotDate) window.FinotDate.setEtMonthLang($('rep-et-month-lang').value);
         initEtCustomControls();
         renderMonthOptions();
         renderEtMonthYearOptions();
@@ -1339,6 +1344,7 @@
         renderPeriodControls();
     });
     on('rep-calendar-mode', 'change', () => {
+        if (window.FinotDate) window.FinotDate.setCalendarMode($('rep-calendar-mode').value);
         renderPeriodControls();
         renderTermDefaultEditor();
         renderTermDefaultsDrawer();
@@ -1380,6 +1386,21 @@
     on('rep-terms-drawer-backdrop', 'click', closeTermsDrawer);
     on('rep-csv', 'click', exportCsv);
     on('rep-print', 'click', printReport);
+
+    document.addEventListener('finot:dateprefs', () => {
+        if (window.FinotDate) {
+            $('rep-date-input-mode').value = window.FinotDate.getInputMode();
+            $('rep-calendar-mode').value = window.FinotDate.getCalendarMode();
+            $('rep-et-month-lang').value = window.FinotDate.getEtMonthLang();
+            renderMonthOptions();
+            renderEtMonthYearOptions();
+            initEtCustomControls();
+            renderTermDefaultEditor();
+            renderPeriodControls();
+            renderTermDefaultsDrawer();
+            renderSavedTerms();
+        }
+    });
 
     renderPeriodControls();
     renderSavedTerms();

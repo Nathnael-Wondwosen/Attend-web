@@ -288,7 +288,7 @@
         recentWrap.innerHTML = rows.slice(0, 40).map(r => `
             <div class="glass rounded-xl px-4 py-3 border border-white/5 flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-white text-sm">${r.attendance_date || '--'}${r.class_name ? ` | ${r.class_name}` : ''}</p>
+                    <p class="text-white text-sm">${(window.FinotDate && r.attendance_date) ? window.FinotDate.formatDate(r.attendance_date) : (r.attendance_date || '--')}${r.class_name ? ` | ${r.class_name}` : ''}</p>
                     <p class="text-xs text-slate-400">${r.workflow_status === 'submitted' ? 'Submitted' : 'Draft'}${r.note ? ` | ${r.note}` : ''}</p>
                 </div>
                 ${pill(r.status)}
@@ -450,6 +450,9 @@
     document.getElementById('student-sheet-backdrop')?.addEventListener('click', closeStudentSheet);
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeStudentSheet();
+    });
+    document.addEventListener('finot:dateprefs', () => {
+        renderDetail();
     });
 
     renderPager();

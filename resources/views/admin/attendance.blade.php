@@ -201,13 +201,15 @@
     };
 
     const setSync = () => {
-        document.getElementById('last-sync').textContent = new Date().toLocaleString();
+        const nowIso = new Date().toISOString();
+        document.getElementById('last-sync').textContent = window.FinotDate ? window.FinotDate.formatDateTime(nowIso) : new Date().toLocaleString();
     };
 
     const fmtDate = (d) => {
         if (!d) return '';
         const s = String(d);
-        return s.length >= 10 ? s.slice(0, 10) : s;
+        const ymd = s.length >= 10 ? s.slice(0, 10) : s;
+        return window.FinotDate ? window.FinotDate.formatDate(ymd) : ymd;
     };
 
     const showLock = (locked, editableUntil) => {
@@ -673,6 +675,19 @@
 
         syncMobileBar();
     };
+
+    document.addEventListener('finot:dateprefs', () => {
+        renderSessions();
+        if (attState.currentSession) {
+            const className = attState.currentClass ? attState.currentClass.name : '';
+            const date = fmtDate(attState.currentSession.attendance_date);
+            const wf = (attState.currentSession.workflow_status || '').toString().toUpperCase();
+            document.getElementById('att-subtitle').textContent = `${className} | ${date} | ${wf}`;
+            document.getElementById('chip-date').textContent = `Date: ${date || '--'}`;
+            renderRoster();
+        }
+        setSync();
+    });
 
     boot();
 </script>

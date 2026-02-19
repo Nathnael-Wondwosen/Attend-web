@@ -235,7 +235,7 @@
                             <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 mt-2 shadow-glow"></span>
                             <div>
                                 <p class="text-white font-medium">${r.student_name} marked ${r.status} (${r.class_name})</p>
-                                <p class="text-xs text-slate-400">${new Date(r.marked_at).toLocaleString()}</p>
+                                <p class="text-xs text-slate-400">${window.FinotDate ? window.FinotDate.formatDateTime(r.marked_at) : new Date(r.marked_at).toLocaleString()}</p>
                             </div>
                         </div>
                     `).join('');
@@ -248,5 +248,6 @@
 
     loadDashboard();
     setInterval(loadDashboard, 5000);
+    document.addEventListener('finot:dateprefs', loadDashboard);
 </script>
 @endpush
