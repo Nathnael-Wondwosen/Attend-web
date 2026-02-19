@@ -1,0 +1,22 @@
+# cPanel application deployment configuration for Laravel 12 application
+# See: https://docs.cpanel.net/knowledge-base/web-services/guide-to-git-deployment/#yaml-deployment
+
+deployment:
+  tasks:
+    - export COMPOSER_ALLOW_SUPERUSER=1
+    - /opt/cpanel/composer/bin/composer install --no-dev --optimize-autoloader
+    - php artisan migrate --force
+    - php artisan config:cache
+    - php artisan route:cache
+    - export PATH=$PATH:/opt/cpanel/nodejs/bin
+    - if [ -f package.json ]; then npm ci && npm run build; fi
+    # Ensure correct permissions for cache and storage folders
+    - chmod -R ug+rwx storage bootstrap/cache || true
+
+# Notes:
+# - Ensure your cPanel domain document root points to the 'public' directory (important for Laravel apps)
+# - PHP version must be 8.2 or higher (set in MultiPHP Manager)
+# - The `vendor/` folder must exist on the server after deployment
+# - If you do not have terminal/SSH access, upload `vendor/` from your build machine, or ask your host to run composer for you
+# - For admin bootstrap via CLI, see custom notes in your README (php artisan admin:ensure)
+# - If using `public/build` (Vite assets), ensure manifest exists after build
