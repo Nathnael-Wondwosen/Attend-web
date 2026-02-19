@@ -58,20 +58,11 @@
 
             <div id="rep-month-wrap" class="lg:col-span-2 hidden">
                 <label class="text-xs text-slate-400">Month</label>
-                <select id="rep-month" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
+                <select id="rep-month" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60"></select>
+                <div id="rep-month-et-year-wrap" class="hidden mt-2">
+                    <label class="text-[11px] text-slate-400">ET year</label>
+                    <select id="rep-month-et-year" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60"></select>
+                </div>
             </div>
 
             <div class="lg:col-span-2">
@@ -94,20 +85,52 @@
         </div>
 
         <div id="rep-period-row" class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-            <div id="rep-custom-inline-wrap" class="hidden lg:col-span-4 glass rounded-xl p-2 border border-white/5">
+            <div id="rep-custom-inline-wrap" class="hidden lg:col-span-5 xl:col-span-6 glass rounded-xl p-2 border border-white/5">
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="text-[11px] text-slate-400">From</label>
                         <input id="rep-from" type="date" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
+                        <div id="rep-et-from-wrap" class="hidden mt-1 grid grid-cols-3 gap-1">
+                            <select id="rep-et-from-year" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                            <select id="rep-et-from-month" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                            <select id="rep-et-from-day" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                        </div>
+                        <p id="rep-from-display" class="mt-1 text-[10px] text-slate-500"></p>
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-400">To</label>
                         <input id="rep-to" type="date" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
+                        <div id="rep-et-to-wrap" class="hidden mt-1 grid grid-cols-3 gap-1">
+                            <select id="rep-et-to-year" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                            <select id="rep-et-to-month" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                            <select id="rep-et-to-day" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                        </div>
+                        <p id="rep-to-display" class="mt-1 text-[10px] text-slate-500"></p>
                     </div>
                 </div>
             </div>
             <div id="rep-period-card" class="glass rounded-xl p-3 border border-white/5 lg:col-span-12">
-                <p class="text-xs text-slate-400">Selected period</p>
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-xs text-slate-400">Selected period</p>
+                    <div class="flex items-center gap-2">
+                        <label for="rep-date-input-mode" class="text-[11px] text-slate-400">Input</label>
+                        <select id="rep-date-input-mode" class="h-7 rounded-md bg-white/5 border border-white/10 px-2 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="gr">GR</option>
+                            <option value="et">ET</option>
+                        </select>
+                        <label for="rep-et-month-lang" class="text-[11px] text-slate-400">ET labels</label>
+                        <select id="rep-et-month-lang" class="h-7 rounded-md bg-white/5 border border-white/10 px-2 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="en">EN</option>
+                            <option value="am">AM</option>
+                        </select>
+                        <label for="rep-calendar-mode" class="text-[11px] text-slate-400">Calendar</label>
+                        <select id="rep-calendar-mode" class="h-7 rounded-md bg-white/5 border border-white/10 px-2 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/60">
+                            <option value="et_gr">ET + GR</option>
+                            <option value="et">ET only</option>
+                            <option value="gr">GR only</option>
+                        </select>
+                    </div>
+                </div>
                 <p id="rep-period-summary" class="text-sm text-slate-200 mt-1">--</p>
             </div>
         </div>
@@ -228,6 +251,230 @@
         { key: 't4', label: '4 Term' },
         { key: 'summer', label: 'Summer Class' },
     ];
+    const ETH_TZ = 'Africa/Addis_Ababa';
+    const etFmt = new Intl.DateTimeFormat('en-ET-u-ca-ethiopic', {
+        timeZone: ETH_TZ,
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+    });
+    const parseYmdUtc = (ymd) => {
+        if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
+        const [y, m, d] = String(ymd).split('-').map(Number);
+        // Use midday Addis Ababa time to avoid date shifts across timezones.
+        return new Date(Date.UTC(y, m - 1, d, 9, 0, 0));
+    };
+    const toEtDate = (ymd) => {
+        const dt = parseYmdUtc(ymd);
+        if (!dt) return '--';
+        return etFmt.format(dt);
+    };
+    const calendarMode = () => $('rep-calendar-mode')?.value || 'et_gr';
+    const formatPeriodRange = (label, from, to) => {
+        const gr = `${from} to ${to}`;
+        const et = `${toEtDate(from)} to ${toEtDate(to)}`;
+        const mode = calendarMode();
+        let rangeText = gr;
+        if (mode === 'et') rangeText = et;
+        else if (mode === 'et_gr') rangeText = `${gr} | ET: ${et}`;
+        return label ? `${label} | ${rangeText}` : rangeText;
+    };
+    const formatSingleDateForMode = (ymd) => {
+        if (!ymd) return '--';
+        const et = toEtDate(ymd);
+        const gr = String(ymd);
+        const mode = calendarMode();
+        if (mode === 'et') return et;
+        if (mode === 'gr') return gr;
+        return `ET: ${et} | GR: ${gr}`;
+    };
+    const formatDrawerRangeHtml = (from, to) => {
+        const gr = `GR: ${from} to ${to}`;
+        const et = `ET: ${toEtDate(from)} to ${toEtDate(to)}`;
+        const mode = calendarMode();
+        if (mode === 'et') return `<p class="text-[11px] text-slate-400 mt-1">${et}</p>`;
+        if (mode === 'gr') return `<p class="text-[11px] text-slate-400 mt-1">${gr}</p>`;
+        return `<p class="text-[11px] text-slate-400 mt-1">${et}</p><p class="text-[10px] text-slate-500 mt-1">${gr}</p>`;
+    };
+    const formatCompactRange = (from, to) => {
+        if (!from || !to) return 'No dates set';
+        const mode = calendarMode();
+        if (mode === 'et') return `${toEtDate(from)} to ${toEtDate(to)}`;
+        if (mode === 'gr') return `${from} to ${to}`;
+        return `ET: ${toEtDate(from)} to ${toEtDate(to)}`;
+    };
+    const dateInputMode = () => $('rep-date-input-mode')?.value || 'gr';
+    const etNumericFmt = new Intl.DateTimeFormat('en-ET-u-ca-ethiopic-nu-latn', {
+        timeZone: ETH_TZ,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+    });
+    const etMonthLabelsEn = [
+        '1 Meskerem', '2 Tikimt', '3 Hidar', '4 Tahsas', '5 Tir', '6 Yekatit', '7 Megabit',
+        '8 Miazia', '9 Ginbot', '10 Sene', '11 Hamle', '12 Nehase', '13 Pagume',
+    ];
+    const etMonthLabelsAm = [
+        '1 መስከረም', '2 ጥቅምት', '3 ህዳር', '4 ታህሳስ', '5 ጥር', '6 የካቲት', '7 መጋቢት',
+        '8 ሚያዝያ', '9 ግንቦት', '10 ሰኔ', '11 ሐምሌ', '12 ነሐሴ', '13 ጳጉሜ',
+    ];
+    const etMonthLang = () => $('rep-et-month-lang')?.value || 'en';
+    const etMonthLabels = () => etMonthLang() === 'am' ? etMonthLabelsAm : etMonthLabelsEn;
+    const partsToInt = (arr, type) => {
+        const v = arr.find((p) => p.type === type)?.value || '';
+        return Number(String(v).replace(/[^\d]/g, ''));
+    };
+    const gregToEtParts = (ymd) => {
+        const dt = parseYmdUtc(ymd);
+        if (!dt) return null;
+        const parts = etNumericFmt.formatToParts(dt);
+        const year = partsToInt(parts, 'year');
+        const month = partsToInt(parts, 'month');
+        const day = partsToInt(parts, 'day');
+        if (!year || !month || !day) return null;
+        return { year, month, day };
+    };
+    const toYmdUtcDate = (d) => {
+        const y = d.getUTCFullYear();
+        const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+    const addDaysToYmd = (ymd, deltaDays) => {
+        const dt = parseYmdUtc(ymd);
+        if (!dt) return '';
+        return toYmdUtcDate(new Date(dt.getTime() + Number(deltaDays || 0) * 86400000));
+    };
+    const etToGregYmd = (etYear, etMonth, etDay) => {
+        if (!etYear || !etMonth || !etDay) return '';
+        const base = new Date(Date.UTC(Number(etYear) + 7, 8, 1, 9, 0, 0));
+        for (let i = -45; i <= 430; i += 1) {
+            const cand = new Date(base.getTime() + i * 86400000);
+            const parts = etNumericFmt.formatToParts(cand);
+            const y = partsToInt(parts, 'year');
+            const m = partsToInt(parts, 'month');
+            const d = partsToInt(parts, 'day');
+            if (y === Number(etYear) && m === Number(etMonth) && d === Number(etDay)) {
+                return toYmdUtcDate(cand);
+            }
+        }
+        return '';
+    };
+    const etDaysInMonth = (year, month) => {
+        if (month !== 13) return 30;
+        return (Number(year) % 4 === 3) ? 6 : 5;
+    };
+    const fillEtDaySelect = (yearEl, monthEl, dayEl, selectedDay = null) => {
+        const y = Number(yearEl?.value || 0);
+        const m = Number(monthEl?.value || 0);
+        if (!yearEl || !monthEl || !dayEl || !y || !m) return;
+        const max = etDaysInMonth(y, m);
+        const prev = Number(selectedDay || dayEl.value || 1);
+        const safe = Math.min(Math.max(prev, 1), max);
+        dayEl.innerHTML = Array.from({ length: max }, (_, i) => i + 1)
+            .map((d) => `<option value="${d}" ${d === safe ? 'selected' : ''}>${d}</option>`)
+            .join('');
+    };
+    const applyEtSelectsFromGregorian = (yearEl, monthEl, dayEl, ymd) => {
+        const parts = gregToEtParts(ymd);
+        if (!parts || !yearEl || !monthEl || !dayEl) return;
+        if (!Array.from(yearEl.options).some((o) => Number(o.value) === parts.year)) {
+            yearEl.innerHTML += `<option value="${parts.year}">${parts.year}</option>`;
+        }
+        yearEl.value = String(parts.year);
+        monthEl.value = String(parts.month);
+        fillEtDaySelect(yearEl, monthEl, dayEl, parts.day);
+    };
+    const syncGregorianInputFromEtSelects = (yearEl, monthEl, dayEl, targetInputId) => {
+        const y = Number(yearEl?.value || 0);
+        const m = Number(monthEl?.value || 0);
+        const d = Number(dayEl?.value || 0);
+        const ymd = etToGregYmd(y, m, d);
+        const target = $(targetInputId);
+        if (target && ymd) target.value = ymd;
+    };
+    const fillEtDayOptions = (prefix, selectedDay = null) => {
+        const y = Number($(`rep-et-${prefix}-year`)?.value || 0);
+        const m = Number($(`rep-et-${prefix}-month`)?.value || 0);
+        const daySel = $(`rep-et-${prefix}-day`);
+        fillEtDaySelect($(`rep-et-${prefix}-year`), $(`rep-et-${prefix}-month`), daySel, selectedDay);
+    };
+    const applyEtControlsFromGregorian = (prefix, ymd) => {
+        const ySel = $(`rep-et-${prefix}-year`);
+        const mSel = $(`rep-et-${prefix}-month`);
+        const dSel = $(`rep-et-${prefix}-day`);
+        applyEtSelectsFromGregorian(ySel, mSel, dSel, ymd);
+    };
+    const syncGregorianFromEt = (prefix) => {
+        const y = Number($(`rep-et-${prefix}-year`)?.value || 0);
+        const m = Number($(`rep-et-${prefix}-month`)?.value || 0);
+        const d = Number($(`rep-et-${prefix}-day`)?.value || 0);
+        const ymd = etToGregYmd(y, m, d);
+        const target = prefix === 'from' ? $('rep-from') : $('rep-to');
+        if (target && ymd) target.value = ymd;
+    };
+    const initEtCustomControls = () => {
+        const currentEt = gregToEtParts(toYmd(new Date())) || { year: 2018, month: 1, day: 1 };
+        const years = [currentEt.year - 2, currentEt.year - 1, currentEt.year, currentEt.year + 1, currentEt.year + 2];
+        ['from', 'to'].forEach((p) => {
+            const ySel = $(`rep-et-${p}-year`);
+            const mSel = $(`rep-et-${p}-month`);
+            if (!ySel || !mSel) return;
+            ySel.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+            mSel.innerHTML = etMonthLabels().map((label, idx) => `<option value="${idx + 1}">${label}</option>`).join('');
+            const currentGreg = p === 'from' ? $('rep-from')?.value : $('rep-to')?.value;
+            applyEtControlsFromGregorian(p, currentGreg || toYmd(new Date()));
+        });
+    };
+    const renderEtMonthYearOptions = () => {
+        const sel = $('rep-month-et-year');
+        if (!sel) return;
+        const currentEt = gregToEtParts(toYmd(new Date())) || { year: 2018 };
+        const years = [currentEt.year - 2, currentEt.year - 1, currentEt.year, currentEt.year + 1, currentEt.year + 2];
+        const existing = Number(sel.value || currentEt.year);
+        const selected = years.includes(existing) ? existing : currentEt.year;
+        sel.innerHTML = years.map((y) => `<option value="${y}" ${y === selected ? 'selected' : ''}>${y}</option>`).join('');
+    };
+    const renderMonthOptions = () => {
+        const monthSel = $('rep-month');
+        if (!monthSel) return;
+        const mode = dateInputMode();
+        const currentGrMonth = (new Date()).getMonth() + 1;
+        const selectedRaw = Number(monthSel.value || currentGrMonth);
+        const labels = mode === 'et'
+            ? etMonthLabels()
+            : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const selected = Math.min(Math.max(selectedRaw, 1), labels.length);
+        monthSel.innerHTML = labels
+            .map((label, idx) => `<option value="${idx + 1}" ${idx + 1 === selected ? 'selected' : ''}>${label}</option>`)
+            .join('');
+    };
+    const initEtTermRowControls = (termKey, fromYmd, toYmd) => {
+        const currentEt = gregToEtParts(toYmd(new Date())) || { year: 2018 };
+        const years = [currentEt.year - 2, currentEt.year - 1, currentEt.year, currentEt.year + 1, currentEt.year + 2];
+        ['from', 'to'].forEach((side) => {
+            const ySel = $(`rep-term-et-${termKey}-${side}-year`);
+            const mSel = $(`rep-term-et-${termKey}-${side}-month`);
+            const dSel = $(`rep-term-et-${termKey}-${side}-day`);
+            if (!ySel || !mSel || !dSel) return;
+            ySel.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+            mSel.innerHTML = etMonthLabels().map((label, idx) => `<option value="${idx + 1}">${label}</option>`).join('');
+            applyEtSelectsFromGregorian(ySel, mSel, dSel, side === 'from' ? fromYmd : toYmd);
+
+            const inputId = `rep-term-${termKey}-${side}`;
+            ySel.addEventListener('change', () => {
+                fillEtDaySelect(ySel, mSel, dSel);
+                syncGregorianInputFromEtSelects(ySel, mSel, dSel, inputId);
+            });
+            mSel.addEventListener('change', () => {
+                fillEtDaySelect(ySel, mSel, dSel);
+                syncGregorianInputFromEtSelects(ySel, mSel, dSel, inputId);
+            });
+            dSel.addEventListener('change', () => {
+                syncGregorianInputFromEtSelects(ySel, mSel, dSel, inputId);
+            });
+        });
+    };
     const firstDefinedTermKey = () => {
         for (const t of TERM_ROWS) {
             const d = rep.termDefinitions[t.key];
@@ -300,11 +547,23 @@
         }
 
         if (t === 'month') {
-            if (!year) return null;
             const month = Number($('rep-month').value || 1);
+            const monthName = $('rep-month').selectedOptions[0]?.textContent || 'Month';
+            if (dateInputMode() === 'et') {
+                const etYear = Number($('rep-month-et-year')?.value || 0);
+                if (!etYear) return null;
+                const from = etToGregYmd(etYear, month, 1);
+                const nextStart = month === 13
+                    ? etToGregYmd(etYear + 1, 1, 1)
+                    : etToGregYmd(etYear, month + 1, 1);
+                if (!from || !nextStart) return null;
+                const to = addDaysToYmd(nextStart, -1);
+                if (!to) return null;
+                return { from, to, label: `${monthName} ${etYear} (ET)` };
+            }
+            if (!year) return null;
             const from = `${year}-${String(month).padStart(2, '0')}-01`;
             const to = toYmd(endOfMonth(year, month));
-            const monthName = $('rep-month').selectedOptions[0]?.textContent || 'Month';
             return { from, to, label: `${monthName} ${year}` };
         }
 
@@ -326,27 +585,74 @@
             }
         }
 
-        $('rep-year-wrap').classList.toggle('hidden', t === 'academic');
+        const etMonthMode = (t === 'month' && dateInputMode() === 'et');
+        $('rep-year-wrap').classList.toggle('hidden', t === 'academic' || etMonthMode);
         $('rep-semester-wrap').classList.toggle('hidden', t !== 'semester');
         $('rep-academic-year-wrap').classList.toggle('hidden', t !== 'academic');
         $('rep-academic-term-wrap').classList.toggle('hidden', t !== 'academic');
         $('rep-month-wrap').classList.toggle('hidden', t !== 'month');
+        $('rep-month-et-year-wrap').classList.toggle('hidden', !etMonthMode);
         $('rep-custom-inline-wrap').classList.toggle('hidden', t !== 'custom');
+
+        // Keep custom range ordered for cleaner UX.
+        if (t === 'custom') {
+            const fromEl = $('rep-from');
+            const toEl = $('rep-to');
+            const mode = dateInputMode();
+            const etFromWrap = $('rep-et-from-wrap');
+            const etToWrap = $('rep-et-to-wrap');
+            if (fromEl) fromEl.classList.toggle('hidden', mode === 'et');
+            if (toEl) toEl.classList.toggle('hidden', mode === 'et');
+            if (etFromWrap) etFromWrap.classList.toggle('hidden', mode !== 'et');
+            if (etToWrap) etToWrap.classList.toggle('hidden', mode !== 'et');
+
+            if (mode === 'et') {
+                syncGregorianFromEt('from');
+                syncGregorianFromEt('to');
+            } else {
+                applyEtControlsFromGregorian('from', fromEl?.value || '');
+                applyEtControlsFromGregorian('to', toEl?.value || '');
+            }
+
+            const fromVal = fromEl?.value || '';
+            const toVal = toEl?.value || '';
+            if (fromVal && toVal && fromVal > toVal) {
+                fromEl.value = toVal;
+                toEl.value = fromVal;
+                if (mode === 'et') {
+                    applyEtControlsFromGregorian('from', fromEl.value);
+                    applyEtControlsFromGregorian('to', toEl.value);
+                }
+            }
+            const showFrom = $('rep-from-display');
+            const showTo = $('rep-to-display');
+            if (showFrom) showFrom.textContent = fromEl?.value ? formatSingleDateForMode(fromEl.value) : '';
+            if (showTo) showTo.textContent = toEl?.value ? formatSingleDateForMode(toEl.value) : '';
+        } else {
+            const showFrom = $('rep-from-display');
+            const showTo = $('rep-to-display');
+            if (showFrom) showFrom.textContent = '';
+            if (showTo) showTo.textContent = '';
+        }
 
         // In semester mode, keep selected-period and date filters in one row.
         const periodCard = $('rep-period-card');
         if (t === 'custom') {
             periodCard.classList.remove('lg:col-span-12');
-            periodCard.classList.add('lg:col-span-8');
+            periodCard.classList.add('lg:col-span-7');
+            periodCard.classList.remove('xl:col-span-12');
+            periodCard.classList.add('xl:col-span-6');
         } else {
             periodCard.classList.add('lg:col-span-12');
-            periodCard.classList.remove('lg:col-span-8');
+            periodCard.classList.remove('lg:col-span-7');
+            periodCard.classList.add('xl:col-span-12');
+            periodCard.classList.remove('xl:col-span-6');
         }
 
         if (t !== 'semester') setTermHint('');
 
         const range = computeRange();
-        $('rep-period-summary').textContent = range ? `${range.label} | ${range.from} to ${range.to}` : 'Please select valid period values.';
+        $('rep-period-summary').textContent = range ? formatPeriodRange(range.label, range.from, range.to) : 'Please select valid period values.';
     };
 
     const setStats = () => {
@@ -453,7 +759,8 @@
             const from = d.from || '';
             const to = d.to || '';
             const isOpen = rep.termEditorOpenKey === t.key;
-            const statusText = from && to ? `${from} to ${to}` : 'No dates set';
+            const statusText = formatCompactRange(from, to);
+            const useEtInput = dateInputMode() === 'et';
             return `
                 <div class="rounded-md border border-white/10 bg-white/5 p-1.5">
                     <button type="button" data-toggle-term-editor="${t.key}" class="w-full flex items-center justify-between gap-2 text-left">
@@ -462,12 +769,27 @@
                     </button>
                     <div class="${isOpen ? 'mt-1.5' : 'hidden'}" id="rep-term-editor-${t.key}">
                         <div class="grid grid-cols-2 gap-1.5">
-                            <input id="rep-term-${t.key}-from" type="date" value="${from}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
-                            <input id="rep-term-${t.key}-to" type="date" value="${to}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
+                            <div>
+                                <input id="rep-term-${t.key}-from" type="date" value="${from}" class="${useEtInput ? 'hidden' : ''} w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
+                                <div id="rep-term-et-${t.key}-from-wrap" class="${useEtInput ? 'grid' : 'hidden'} grid-cols-3 gap-1">
+                                    <select id="rep-term-et-${t.key}-from-year" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                    <select id="rep-term-et-${t.key}-from-month" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                    <select id="rep-term-et-${t.key}-from-day" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                </div>
+                            </div>
+                            <div>
+                                <input id="rep-term-${t.key}-to" type="date" value="${to}" class="${useEtInput ? 'hidden' : ''} w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
+                                <div id="rep-term-et-${t.key}-to-wrap" class="${useEtInput ? 'grid' : 'hidden'} grid-cols-3 gap-1">
+                                    <select id="rep-term-et-${t.key}-to-year" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                    <select id="rep-term-et-${t.key}-to-month" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                    <select id="rep-term-et-${t.key}-to-day" class="rounded-md bg-white/5 border border-white/10 px-1 py-1 text-[10px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40"></select>
+                                </div>
+                            </div>
                         </div>
                         <div class="mt-1.5 flex justify-end">
                             <button type="button" data-save-term-default="${t.key}" class="h-6 px-1.5 rounded-md glass text-[10px] text-slate-200 hover:text-white">Save</button>
                         </div>
+                        ${from && to ? formatDrawerRangeHtml(from, to) : ''}
                     </div>
                 </div>
             `;
@@ -489,6 +811,13 @@
                 await saveTermDefault(termKey);
             });
         });
+
+        if (dateInputMode() === 'et') {
+            TERM_ROWS.forEach((t) => {
+                const d = rep.termDefinitions[t.key] || {};
+                initEtTermRowControls(t.key, d.from || '', d.to || '');
+            });
+        }
     };
 
     const loadTermDefaults = async () => {
@@ -595,7 +924,7 @@
                     ${grouped[year].map((d) => `
                         <div class="rounded-md border border-white/10 bg-white/5 p-1.5">
                             <p class="text-[11px] text-white">${d.term_label || d.term_key}</p>
-                            <p class="text-[11px] text-slate-400 mt-1">${d.from} to ${d.to}</p>
+                            ${formatDrawerRangeHtml(d.from, d.to)}
                         </div>
                     `).join('')}
                 </div>
@@ -631,7 +960,7 @@
                         return `
                             <div class="rounded-md border ${base} p-1.5">
                                 <p class="text-[11px] text-white">${t.label}</p>
-                                <p class="text-[11px] text-slate-400 mt-1">${t.from} to ${t.to}</p>
+                                ${formatDrawerRangeHtml(t.from, t.to)}
                                 <div class="mt-1.5 flex items-center gap-1.5">
                                     <button type="button" data-saved-id="${t.id}" class="h-6 px-1.5 rounded-md glass text-[10px] text-slate-200 hover:text-white">Load</button>
                                     <button type="button" data-edit-saved-id="${t.id}" class="h-6 px-1.5 rounded-md glass text-[10px] text-slate-200 hover:text-cyan-300">Edit</button>
@@ -739,7 +1068,7 @@
     const loadReportByRange = async (classId, range, label = null) => {
         rep.classId = Number(classId);
         rep.range = { from: range.from, to: range.to };
-        $('rep-period-summary').textContent = label ? `${label} | ${range.from} to ${range.to}` : `${range.from} to ${range.to}`;
+        $('rep-period-summary').textContent = formatPeriodRange(label, range.from, range.to);
         $('rep-rows').innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">Loading...</p>';
 
         try {
@@ -831,11 +1160,52 @@
         if (!range) return;
 
         try {
-            const endpoint = `/api/v1/reports/class/${classId}/range?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}&format=csv`;
-            const res = await fetch(endpoint, { headers: { 'Accept': 'text/csv' } });
-            if (!res.ok) throw new Error('CSV export failed');
+            const rows = rep.visibleRows.length ? rep.visibleRows : rep.rows;
+            const classLabel = $('rep-class').selectedOptions[0]?.textContent || `Class ${classId}`;
+            const csvEscape = (v) => {
+                const s = String(v ?? '');
+                if (s.includes('"') || s.includes(',') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+                return s;
+            };
+            const mode = calendarMode();
+            const header = [
+                'class_id',
+                'class_name',
+                'period_label',
+                ...(mode !== 'et' ? ['from_gregorian', 'to_gregorian'] : []),
+                ...(mode !== 'gr' ? ['from_ethiopian', 'to_ethiopian'] : []),
+                'student_id',
+                'full_name',
+                'present',
+                'permission',
+                'absent',
+                'unmarked',
+                'total_days',
+                'attendance_percent',
+                'attendance_mark_percent',
+            ];
+            const lines = [header.join(',')];
+            rows.forEach((r) => {
+                const mark = markPercent(r);
+                lines.push([
+                    classId,
+                    classLabel,
+                    range.label || '',
+                    ...(mode !== 'et' ? [range.from, range.to] : []),
+                    ...(mode !== 'gr' ? [toEtDate(range.from), toEtDate(range.to)] : []),
+                    r.student_id,
+                    r.full_name,
+                    r.present,
+                    r.permission,
+                    r.absent,
+                    r.unmarked,
+                    r.total_days,
+                    mark === null || !Number.isFinite(mark) ? '' : Number(mark).toFixed(1),
+                    mark === null || !Number.isFinite(mark) ? '' : Number(mark).toFixed(1),
+                ].map(csvEscape).join(','));
+            });
 
-            const blob = await res.blob();
+            const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -925,12 +1295,19 @@
     $('rep-month').value = String(now.getMonth() + 1);
     $('rep-term-plan').value = 't1';
     $('rep-period-type').value = 'year';
+    $('rep-date-input-mode').value = 'et';
+    $('rep-et-month-lang').value = 'en';
+    $('rep-calendar-mode').value = 'et';
 
     // Default custom range: last 30 days.
     const from = new Date(now);
     from.setDate(now.getDate() - 29);
     $('rep-from').value = toYmd(from);
     $('rep-to').value = toYmd(now);
+    initEtCustomControls();
+    renderMonthOptions();
+    $('rep-month').value = String(now.getMonth() + 1);
+    renderEtMonthYearOptions();
 
     const on = (id, event, handler) => {
         const el = $(id);
@@ -946,8 +1323,44 @@
     on('rep-academic-year', 'change', renderPeriodControls);
     on('rep-academic-term', 'change', renderPeriodControls);
     on('rep-month', 'change', renderPeriodControls);
+    on('rep-month-et-year', 'change', renderPeriodControls);
+    on('rep-date-input-mode', 'change', () => {
+        renderMonthOptions();
+        renderEtMonthYearOptions();
+        renderPeriodControls();
+        renderTermDefaultEditor();
+    });
+    on('rep-et-month-lang', 'change', () => {
+        initEtCustomControls();
+        renderMonthOptions();
+        renderEtMonthYearOptions();
+        renderTermDefaultEditor();
+        renderPeriodControls();
+    });
+    on('rep-calendar-mode', 'change', () => {
+        renderPeriodControls();
+        renderTermDefaultEditor();
+        renderTermDefaultsDrawer();
+        renderSavedTerms();
+    });
     on('rep-from', 'change', renderPeriodControls);
     on('rep-to', 'change', renderPeriodControls);
+    ['from', 'to'].forEach((p) => {
+        on(`rep-et-${p}-year`, 'change', () => {
+            fillEtDayOptions(p);
+            syncGregorianFromEt(p);
+            renderPeriodControls();
+        });
+        on(`rep-et-${p}-month`, 'change', () => {
+            fillEtDayOptions(p);
+            syncGregorianFromEt(p);
+            renderPeriodControls();
+        });
+        on(`rep-et-${p}-day`, 'change', () => {
+            syncGregorianFromEt(p);
+            renderPeriodControls();
+        });
+    });
     on('rep-student-filter', 'change', renderRows);
     on('rep-class', 'change', () => {
         rep.activeSavedTermId = null;
