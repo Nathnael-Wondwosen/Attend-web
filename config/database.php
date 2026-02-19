@@ -127,7 +127,8 @@ return [
     */
 
     'migrations' => [
-        'table' => 'migrations',
+        // Use an app-specific table name to avoid conflicts with mother-system schemas.
+        'table' => env('DB_MIGRATIONS_TABLE', 'finot_migrations'),
         'update_date_on_publish' => true,
     ],
 

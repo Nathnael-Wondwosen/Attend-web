@@ -76,6 +76,10 @@ class OpsController extends Controller
             ['view:cache', []],
         ];
 
+        if (config('finot.admin.auto_ensure_on_ops_run')) {
+            $commands[] = ['admin:ensure', []];
+        }
+
         $results = [];
         foreach ($commands as [$cmd, $args]) {
             try {

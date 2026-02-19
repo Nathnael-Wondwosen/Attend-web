@@ -14,7 +14,12 @@
     <main class="max-w-3xl mx-auto px-4 py-8 space-y-4">
         <div class="glass rounded-2xl p-5">
             <h1 class="text-xl text-white font-semibold">Ops Runner</h1>
-            <p class="text-sm text-slate-300 mt-1">Runs: <code>storage:link</code>, <code>config:cache</code>, <code>route:cache</code>, <code>view:cache</code></p>
+            <p class="text-sm text-slate-300 mt-1">
+                Runs: <code>storage:link</code>, <code>config:cache</code>, <code>route:cache</code>, <code>view:cache</code>
+                @if(config('finot.admin.auto_ensure_on_ops_run'))
+                    , <code>admin:ensure</code>
+                @endif
+            </p>
 
             <form method="POST" action="/run" class="mt-4 space-y-3">
                 @csrf

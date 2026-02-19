@@ -69,6 +69,9 @@
                     <h1 class="text-2xl text-white font-medium">Take Attendance</h1>
                     <p class="text-slate-400 text-sm mt-1">Select class, set date, mark statuses, then save and submit.</p>
                 </div>
+                <button id="take-logout" type="button" class="hidden h-10 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring text-sm">
+                    <i class="fas fa-right-from-bracket mr-2"></i>Logout
+                </button>
             </div>
 
             <p class="text-sm text-red-300 mt-3" id="take-error"></p>
@@ -194,6 +197,7 @@
 
         const el = (id) => document.getElementById(id);
         const setError = (m) => { el('take-error').textContent = m || ''; };
+        const teacherTokenKey = 'finot_teacher_token';
 
         const toast = (type, msg) => {
             const wrap = el('take-toasts');
@@ -265,6 +269,24 @@
             const headers = new Headers(options.headers || {});
             if (!headers.has('Accept')) headers.set('Accept', 'application/json');
             return fetch(`/api/v1/public/v1${path}`, { ...options, headers });
+        };
+
+        const logoutTeacher = async () => {
+            const token = localStorage.getItem(teacherTokenKey);
+            if (token) {
+                try {
+                    await fetch('/api/v1/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+                } catch (_) {}
+            }
+
+            localStorage.removeItem(teacherTokenKey);
+            window.location.href = '/teacher/login';
         };
 
         const statusPill = (status) => {
@@ -544,7 +566,12 @@
         el('take-m-save')?.addEventListener('click', () => el('take-save')?.click());
         el('take-m-submit')?.addEventListener('click', () => el('take-submit')?.click());
         el('take-m-refresh')?.addEventListener('click', () => el('take-refresh')?.click());
+        el('take-logout')?.addEventListener('click', logoutTeacher);
         syncMobileBar();
+
+        if (localStorage.getItem(teacherTokenKey)) {
+            el('take-logout')?.classList.remove('hidden');
+        }
 
         // Public mode: no login/token required.
         (async () => {

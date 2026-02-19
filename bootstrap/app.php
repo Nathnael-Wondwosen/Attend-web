@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         App\Console\Commands\CreateTeacherAccount::class,
         App\Console\Commands\SetAdminEmail::class,
         App\Console\Commands\SetAdminPassword::class,
+        App\Console\Commands\EnsureAdminAccount::class,
     ])
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('attendance:rotate-tokens')->everyMinute();
