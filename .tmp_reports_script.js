@@ -1,207 +1,9 @@
-@extends('layouts.admin')
 
-@section('title', 'Finot | Reports')
-@section('page-label', 'Reports')
-@section('page-title', 'Class Attendance Reports')
-@section('page-subtitle', 'Choose class and period, then see each student\'s attendance percentage and mark.')
-
-@section('content')
-    <div class="glass rounded-2xl p-4 md:p-6 shadow-glow space-y-5">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-            <div class="lg:col-span-2">
-                <label class="text-xs text-slate-400">Class</label>
-                <select id="rep-class" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="">Loading...</option>
-                </select>
-            </div>
-
-            <div class="lg:col-span-2">
-                <label class="text-xs text-slate-400">Period type</label>
-                <select id="rep-period-type" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="semester">Semester</option>
-                    <option value="academic">Academic Year</option>
-                    <option value="year" selected>Year</option>
-                    <option value="month">Month</option>
-                    <option value="custom">Custom dates</option>
-                </select>
-            </div>
-
-            <div id="rep-year-wrap" class="lg:col-span-2">
-                <label class="text-xs text-slate-400">Year</label>
-                <select id="rep-year" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60"></select>
-            </div>
-
-            <div id="rep-semester-wrap" class="lg:col-span-2">
-                <label class="text-xs text-slate-400">Term</label>
-                <select id="rep-term-plan" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="t1">1 Term</option>
-                    <option value="t2">2 Term</option>
-                    <option value="t3">3 Term</option>
-                    <option value="t4">4 Term</option>
-                    <option value="summer">Summer Class</option>
-                </select>
-            </div>
-
-            <div id="rep-academic-year-wrap" class="lg:col-span-2 hidden">
-                <label class="text-xs text-slate-400">Academic year</label>
-                <select id="rep-academic-year" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60"></select>
-            </div>
-
-            <div id="rep-academic-term-wrap" class="lg:col-span-2 hidden">
-                <label class="text-xs text-slate-400">Term</label>
-                <select id="rep-academic-term" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="full">Full academic year</option>
-                    <option value="term1">Term 1 (Sep-Jan)</option>
-                    <option value="term2">Term 2 (Feb-Jun)</option>
-                </select>
-            </div>
-
-            <div id="rep-month-wrap" class="lg:col-span-2 hidden">
-                <label class="text-xs text-slate-400">Month</label>
-                <select id="rep-month" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
-
-            <div class="lg:col-span-2">
-                <label class="text-xs text-slate-400">Student filter</label>
-                <select id="rep-student-filter" class="mt-1 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
-                    <option value="all">All students</option>
-                    <option value="risk">At risk (&lt; 75%)</option>
-                    <option value="ok">On track (&gt;= 75%)</option>
-                </select>
-            </div>
-
-            <div class="lg:col-span-2">
-                <div class="grid grid-cols-4 gap-1.5">
-                    <button id="rep-load" class="h-8 px-2 rounded-lg neon-pill text-[10px] font-normal whitespace-nowrap">Load</button>
-                    <button id="rep-open-terms-drawer" class="h-8 px-2 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-[10px] font-normal whitespace-nowrap">Terms</button>
-                    <button id="rep-csv" class="h-8 px-2 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-[10px] font-normal whitespace-nowrap">CSV</button>
-                    <button id="rep-print" class="h-8 px-2 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-[10px] font-normal whitespace-nowrap">Print</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="rep-period-row" class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-            <div id="rep-custom-inline-wrap" class="hidden lg:col-span-4 glass rounded-xl p-2 border border-white/5">
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[11px] text-slate-400">From</label>
-                        <input id="rep-from" type="date" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
-                    </div>
-                    <div>
-                        <label class="text-[11px] text-slate-400">To</label>
-                        <input id="rep-to" type="date" class="mt-1 w-full rounded-lg bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-white focus:outline-none focus:ring-2 focus:ring-neon/60" />
-                    </div>
-                </div>
-            </div>
-            <div id="rep-period-card" class="glass rounded-xl p-3 border border-white/5 lg:col-span-12">
-                <p class="text-xs text-slate-400">Selected period</p>
-                <p id="rep-period-summary" class="text-sm text-slate-200 mt-1">--</p>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="glass rounded-xl p-3 border border-white/5">
-                <p class="text-xs text-slate-400">Students</p>
-                <p class="text-2xl text-white font-medium" id="rep-students">--</p>
-            </div>
-            <div class="glass rounded-xl p-3 border border-white/5">
-                <p class="text-xs text-slate-400">Sessions in period</p>
-                <p class="text-2xl text-white font-medium" id="rep-sessions">--</p>
-            </div>
-            <div class="glass rounded-xl p-3 border border-white/5">
-                <p class="text-xs text-slate-400">Class average</p>
-                <p class="text-2xl text-white font-medium" id="rep-average">--</p>
-            </div>
-            <div class="glass rounded-xl p-3 border border-white/5">
-                <p class="text-xs text-slate-400">At risk (&lt; 75%)</p>
-                <p class="text-2xl text-white font-medium" id="rep-risk">--</p>
-            </div>
-        </div>
-
-        <div class="glass rounded-2xl border border-white/5 overflow-hidden">
-            <div class="hidden lg:grid grid-cols-12 px-4 py-3 bg-white/5 text-xs text-slate-300">
-                <span class="col-span-4">Student</span>
-                <span class="col-span-1">Present</span>
-                <span class="col-span-2">Permission</span>
-                <span class="col-span-1">Absent</span>
-                <span class="col-span-1">Unmarked</span>
-                <span class="col-span-1">%</span>
-                <span class="col-span-2 text-right">Attendance Mark (%)</span>
-            </div>
-            <div id="rep-rows" class="divide-y divide-white/5 min-h-[200px]">
-                <p class="text-slate-400 text-sm px-4 py-3">Select class and period, then load the report.</p>
-            </div>
-        </div>
-
-        <p id="rep-error" class="text-sm text-red-300"></p>
-    </div>
-
-    <div id="rep-terms-drawer-backdrop" class="fixed inset-0 bg-black/50 z-[80] hidden"></div>
-    <aside id="rep-terms-drawer" class="fixed top-0 right-0 h-full w-full sm:w-[360px] max-w-full glass border-l border-white/10 z-[90] translate-x-full transition-transform duration-200 ease-out">
-        <div class="h-full flex flex-col">
-            <div class="px-3 py-2.5 border-b border-white/10 flex items-center justify-between gap-2">
-                <div>
-                    <p class="text-[11px] text-slate-400">Terms Manager</p>
-                    <p class="text-xs text-white">Grouped by year</p>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <button id="rep-save-term-drawer" class="h-7 px-2 rounded-md glass text-[10px] text-slate-200 hover:text-white whitespace-nowrap">Save Report Term</button>
-                    <button id="rep-close-terms-drawer" class="h-7 w-7 rounded-md glass text-slate-300 hover:text-white text-xs">x</button>
-                </div>
-            </div>
-
-            <div class="p-3 overflow-y-auto space-y-3">
-                <p id="rep-term-default-hint-drawer" class="text-[11px] text-slate-500"></p>
-
-                <section class="space-y-1.5">
-                    <div class="flex items-center justify-between gap-2">
-                        <p class="text-[11px] text-slate-400">Term dates setup</p>
-                        <button id="rep-save-all-term-defaults" class="h-7 px-2 rounded-md glass text-[10px] text-slate-200 hover:text-white">Save All</button>
-                    </div>
-                    <div id="rep-term-default-editor" class="space-y-1.5">
-                        <p class="text-[11px] text-slate-500">Select a class to configure term dates.</p>
-                    </div>
-                </section>
-
-                <section class="space-y-1.5">
-                    <p class="text-[11px] text-slate-400">Semester defaults</p>
-                    <div id="rep-term-defaults-groups" class="space-y-2">
-                        <p class="text-[11px] text-slate-500">Select a class to load defaults.</p>
-                    </div>
-                </section>
-
-                <section class="space-y-1.5">
-                    <p class="text-[11px] text-slate-400">Saved report terms</p>
-                    <div id="rep-saved-terms-groups" class="space-y-2">
-                        <p class="text-[11px] text-slate-500">Select a class to load saved terms.</p>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </aside>
-@endsection
-
-@push('scripts')
-<script>
     const rep = {
         rows: [],
         visibleRows: [],
         savedTerms: [],
-        termDefinitions: {},
-        termEditorOpenKey: null,
+        termDefaults: {},
         activeSavedTermId: null,
         classId: null,
         range: { from: null, to: null },
@@ -228,28 +30,12 @@
         { key: 't4', label: '4 Term' },
         { key: 'summer', label: 'Summer Class' },
     ];
-    const firstDefinedTermKey = () => {
-        for (const t of TERM_ROWS) {
-            const d = rep.termDefinitions[t.key];
-            if (d?.from && d?.to) return t.key;
-        }
-        return null;
-    };
 
     const resultPill = (rate) => {
         if (rate === null || rate === undefined) {
             return '<span class="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-300">--</span>';
         }
         return `<span class="px-3 py-1 rounded-full bg-white/5 text-xs text-slate-200">${Number(rate).toFixed(1)}%</span>`;
-    };
-    const markPercent = (row) => {
-        if (row?.attendance_mark_percent !== null && row?.attendance_mark_percent !== undefined) {
-            return Number(row.attendance_mark_percent);
-        }
-        if (row?.present_rate !== null && row?.present_rate !== undefined) {
-            return Number(row.present_rate);
-        }
-        return null;
     };
 
     const toYmd = (d) => {
@@ -269,7 +55,7 @@
 
         if (t === 'semester') {
             const termPlan = String($('rep-term-plan').value || 't1');
-            const preset = rep.termDefinitions[termPlan] || null;
+            const preset = rep.termDefaults[termPlan] || null;
             const rawStart = preset?.from || '';
             const rawEnd = preset?.to || '';
             if (!rawStart || !rawEnd) return null;
@@ -317,31 +103,17 @@
 
     const renderPeriodControls = () => {
         const t = $('rep-period-type').value;
-        if (t === 'semester') {
-            const selectedKey = String($('rep-term-plan').value || 't1');
-            const selected = rep.termDefinitions[selectedKey];
-            const firstKey = firstDefinedTermKey();
-            if ((!selected?.from || !selected?.to) && firstKey && firstKey !== selectedKey) {
-                $('rep-term-plan').value = firstKey;
-            }
-        }
-
-        $('rep-year-wrap').classList.toggle('hidden', t === 'academic');
+        $('rep-year-wrap').classList.toggle('hidden', t === 'academic' || t === 'semester');
         $('rep-semester-wrap').classList.toggle('hidden', t !== 'semester');
         $('rep-academic-year-wrap').classList.toggle('hidden', t !== 'academic');
         $('rep-academic-term-wrap').classList.toggle('hidden', t !== 'academic');
         $('rep-month-wrap').classList.toggle('hidden', t !== 'month');
-        $('rep-custom-inline-wrap').classList.toggle('hidden', t !== 'custom');
+        $('rep-custom-wrap').classList.toggle('hidden', t !== 'custom');
 
         // In semester mode, keep selected-period and date filters in one row.
         const periodCard = $('rep-period-card');
-        if (t === 'custom') {
-            periodCard.classList.remove('lg:col-span-12');
-            periodCard.classList.add('lg:col-span-8');
-        } else {
-            periodCard.classList.add('lg:col-span-12');
-            periodCard.classList.remove('lg:col-span-8');
-        }
+        periodCard.classList.toggle('lg:col-span-12', true);
+        periodCard.classList.remove('lg:col-span-4');
 
         if (t !== 'semester') setTermHint('');
 
@@ -361,7 +133,7 @@
         }
 
         const rates = rows
-            .map(r => markPercent(r))
+            .map(r => (r.present_rate === null || r.present_rate === undefined) ? null : Number(r.present_rate))
             .filter(v => v !== null && Number.isFinite(v));
 
         const avg = rates.length ? (rates.reduce((a, b) => a + b, 0) / rates.length) : null;
@@ -382,7 +154,7 @@
 
         const mode = $('rep-student-filter').value || 'all';
         rep.visibleRows = rep.rows.filter((r) => {
-            const rate = Number(markPercent(r) ?? -1);
+            const rate = Number(r.present_rate ?? -1);
             if (!Number.isFinite(rate) || rate < 0) return mode === 'all';
             if (mode === 'risk') return rate < 75;
             if (mode === 'ok') return rate >= 75;
@@ -396,15 +168,14 @@
         }
 
         const sorted = [...rep.visibleRows].sort((a, b) => {
-            const ar = Number(markPercent(a) ?? -1);
-            const br = Number(markPercent(b) ?? -1);
+            const ar = Number(a.present_rate ?? -1);
+            const br = Number(b.present_rate ?? -1);
             if (ar !== br) return ar - br;
             return String(a.full_name || '').localeCompare(String(b.full_name || ''));
         });
 
         wrap.innerHTML = sorted.map(r => {
-            const rateNum = markPercent(r);
-            const rate = (rateNum === null || rateNum === undefined || !Number.isFinite(rateNum)) ? '--' : `${Number(rateNum).toFixed(1)}%`;
+            const rate = (r.present_rate === null || r.present_rate === undefined) ? '--' : `${Number(r.present_rate).toFixed(1)}%`;
             return `
                 <div class="grid grid-cols-1 lg:grid-cols-12 px-4 py-3 gap-2 items-center">
                     <div class="lg:col-span-4">
@@ -416,7 +187,7 @@
                     <div class="lg:col-span-1 text-slate-200">${r.absent}</div>
                     <div class="lg:col-span-1 text-slate-200">${r.unmarked}</div>
                     <div class="lg:col-span-1 text-slate-200">${rate}</div>
-                    <div class="lg:col-span-2 flex lg:justify-end">${resultPill(rateNum)}</div>
+                    <div class="lg:col-span-2 flex lg:justify-end">${resultPill(r.present_rate)}</div>
                 </div>
             `;
         }).join('');
@@ -442,45 +213,29 @@
 
     const renderTermDefaultEditor = () => {
         const wrap = $('rep-term-default-editor');
-        const year = Number($('rep-year').value || 0);
-        if (!year) {
-            wrap.innerHTML = '<p class="text-[11px] text-slate-500">Select a year to configure term dates.</p>';
+        const classId = Number($('rep-class').value || 0);
+        if (!classId) {
+            wrap.innerHTML = '<p class="text-[11px] text-slate-500">Select a class to configure term dates.</p>';
             return;
         }
 
         wrap.innerHTML = TERM_ROWS.map((t) => {
-            const d = rep.termDefinitions[t.key] || {};
+            const d = rep.termDefaults[t.key] || {};
             const from = d.from || '';
             const to = d.to || '';
-            const isOpen = rep.termEditorOpenKey === t.key;
-            const statusText = from && to ? `${from} to ${to}` : 'No dates set';
             return `
                 <div class="rounded-md border border-white/10 bg-white/5 p-1.5">
-                    <button type="button" data-toggle-term-editor="${t.key}" class="w-full flex items-center justify-between gap-2 text-left">
-                        <span class="text-[11px] text-white">${t.label}</span>
-                        <span class="text-[10px] text-slate-400">${statusText}</span>
-                    </button>
-                    <div class="${isOpen ? 'mt-1.5' : 'hidden'}" id="rep-term-editor-${t.key}">
-                        <div class="grid grid-cols-2 gap-1.5">
-                            <input id="rep-term-${t.key}-from" type="date" value="${from}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
-                            <input id="rep-term-${t.key}-to" type="date" value="${to}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
-                        </div>
-                        <div class="mt-1.5 flex justify-end">
-                            <button type="button" data-save-term-default="${t.key}" class="h-6 px-1.5 rounded-md glass text-[10px] text-slate-200 hover:text-white">Save</button>
-                        </div>
+                    <p class="text-[11px] text-white mb-1">${t.label}</p>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <input id="rep-term-${t.key}-from" type="date" value="${from}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
+                        <input id="rep-term-${t.key}-to" type="date" value="${to}" class="w-full rounded-md bg-white/5 border border-white/10 px-2 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon/40" />
+                    </div>
+                    <div class="mt-1.5 flex justify-end">
+                        <button type="button" data-save-term-default="${t.key}" class="h-6 px-1.5 rounded-md glass text-[10px] text-slate-200 hover:text-white">Save</button>
                     </div>
                 </div>
             `;
         }).join('');
-
-        wrap.querySelectorAll('[data-toggle-term-editor]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const termKey = String(btn.getAttribute('data-toggle-term-editor') || '');
-                if (!termKey) return;
-                rep.termEditorOpenKey = rep.termEditorOpenKey === termKey ? null : termKey;
-                renderTermDefaultEditor();
-            });
-        });
 
         wrap.querySelectorAll('[data-save-term-default]').forEach((btn) => {
             btn.addEventListener('click', async () => {
@@ -491,25 +246,21 @@
         });
     };
 
-    const loadTermDefaults = async () => {
-        const year = Number($('rep-year').value || 0);
-        rep.termDefinitions = {};
-        if (!year) {
+    const loadTermDefaults = async (classId) => {
+        rep.termDefaults = {};
+        if (!classId) {
             renderTermDefaultEditor();
             setTermHint('');
             renderTermDefaultsDrawer();
             return;
         }
         try {
-            const res = await fetch(`/api/v1/reports/term-definitions?year=${encodeURIComponent(String(year))}`);
+            const res = await fetch(`/api/v1/reports/class/${classId}/semester-defaults`);
             const json = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(json?.message || 'Failed to load term definitions');
-            const rows = Array.isArray(json?.data) ? json.data : [];
-            rows.forEach((r) => {
-                rep.termDefinitions[String(r.term_key)] = r;
-            });
+            if (!res.ok) throw new Error(json?.message || 'Failed to load term defaults');
+            rep.termDefaults = json?.defaults || {};
         } catch {
-            rep.termDefinitions = {};
+            rep.termDefaults = {};
         }
         renderTermDefaultEditor();
         renderTermDefaultsDrawer();
@@ -518,9 +269,9 @@
 
     const saveTermDefault = async (termKeyArg = null) => {
         $('rep-error').textContent = '';
-        const year = Number($('rep-year').value || 0);
-        if (!year) {
-            $('rep-error').textContent = 'Select a year first.';
+        const classId = Number($('rep-class').value || 0);
+        if (!classId) {
+            $('rep-error').textContent = 'Select a class first.';
             return;
         }
         const termKey = String(termKeyArg || $('rep-term-plan').value || 't1');
@@ -533,15 +284,14 @@
         }
         const label = termKey === 'summer' ? 'Summer Class' : `${termKey.replace('t', '')} Term`;
         try {
-            const res = await fetch(`/api/v1/reports/term-definitions/${encodeURIComponent(String(year))}/${encodeURIComponent(termKey)}`, {
+            const res = await fetch(`/api/v1/reports/class/${classId}/semester-defaults/${encodeURIComponent(termKey)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from, to, term_label: label }),
+                body: JSON.stringify({ from, to, label }),
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.message || 'Failed to save term dates');
-            rep.termEditorOpenKey = null;
-            await loadTermDefaults();
+            await loadTermDefaults(classId);
             setTermHint(`Saved default dates for ${label}.`);
         } catch (e) {
             $('rep-error').textContent = e?.message || 'Failed to save term dates';
@@ -549,9 +299,9 @@
     };
 
     const saveAllTermDefaults = async () => {
-        const year = Number($('rep-year').value || 0);
-        if (!year) {
-            $('rep-error').textContent = 'Select a year first.';
+        const classId = Number($('rep-class').value || 0);
+        if (!classId) {
+            $('rep-error').textContent = 'Select a class first.';
             return;
         }
 
@@ -576,14 +326,14 @@
 
     const renderTermDefaultsDrawer = () => {
         const wrap = $('rep-term-defaults-groups');
-        const year = Number($('rep-year').value || 0);
-        if (!year) {
-            wrap.innerHTML = '<p class="text-[11px] text-slate-500">Select a year to load term definitions.</p>';
+        const classId = $('rep-class').value;
+        if (!classId) {
+            wrap.innerHTML = '<p class="text-[11px] text-slate-500">Select a class to load defaults.</p>';
             return;
         }
-        const rows = Object.values(rep.termDefinitions || {});
+        const rows = Object.values(rep.termDefaults || {});
         if (!rows.length) {
-            wrap.innerHTML = '<p class="text-[11px] text-slate-500">No term definitions saved for this year.</p>';
+            wrap.innerHTML = '<p class="text-[11px] text-slate-500">No semester defaults saved yet.</p>';
             return;
         }
         const grouped = groupByYear(rows);
@@ -594,7 +344,7 @@
                 <div class="space-y-1.5">
                     ${grouped[year].map((d) => `
                         <div class="rounded-md border border-white/10 bg-white/5 p-1.5">
-                            <p class="text-[11px] text-white">${d.term_label || d.term_key}</p>
+                            <p class="text-[11px] text-white">${d.label || d.term_key}</p>
                             <p class="text-[11px] text-slate-400 mt-1">${d.from} to ${d.to}</p>
                         </div>
                     `).join('')}
@@ -856,8 +606,7 @@
         const title = `${classLabel} Attendance Report`;
 
         const rowsHtml = (rep.visibleRows.length ? rep.visibleRows : rep.rows).map((r) => {
-            const rateNum = markPercent(r);
-            const rate = (rateNum === null || rateNum === undefined || !Number.isFinite(rateNum)) ? '--' : `${Number(rateNum).toFixed(1)}%`;
+            const rate = (r.present_rate === null || r.present_rate === undefined) ? '--' : `${Number(r.present_rate).toFixed(1)}%`;
             return `
                 <tr>
                     <td>${r.full_name} (#${r.student_id})</td>
@@ -901,7 +650,7 @@
                             <th>Absent</th>
                             <th>Unmarked</th>
                             <th>Rate</th>
-                            <th>Attendance Mark (%)</th>
+                            <th>Result (%)</th>
                         </tr>
                     </thead>
                     <tbody>${rowsHtml}</tbody>
@@ -924,7 +673,6 @@
         .join('');
     $('rep-month').value = String(now.getMonth() + 1);
     $('rep-term-plan').value = 't1';
-    $('rep-period-type').value = 'year';
 
     // Default custom range: last 30 days.
     const from = new Date(now);
@@ -932,47 +680,40 @@
     $('rep-from').value = toYmd(from);
     $('rep-to').value = toYmd(now);
 
-    const on = (id, event, handler) => {
-        const el = $(id);
-        if (el) el.addEventListener(event, handler);
-    };
-
-    on('rep-period-type', 'change', renderPeriodControls);
-    on('rep-year', 'change', () => {
-        renderPeriodControls();
-        loadTermDefaults();
-    });
-    on('rep-term-plan', 'change', renderPeriodControls);
-    on('rep-academic-year', 'change', renderPeriodControls);
-    on('rep-academic-term', 'change', renderPeriodControls);
-    on('rep-month', 'change', renderPeriodControls);
-    on('rep-from', 'change', renderPeriodControls);
-    on('rep-to', 'change', renderPeriodControls);
-    on('rep-student-filter', 'change', renderRows);
-    on('rep-class', 'change', () => {
+    $('rep-period-type').addEventListener('change', renderPeriodControls);
+    $('rep-year').addEventListener('change', renderPeriodControls);
+    $('rep-term-plan').addEventListener('change', renderPeriodControls);
+    $('rep-academic-year').addEventListener('change', renderPeriodControls);
+    $('rep-academic-term').addEventListener('change', renderPeriodControls);
+    $('rep-month').addEventListener('change', renderPeriodControls);
+    $('rep-from').addEventListener('change', renderPeriodControls);
+    $('rep-to').addEventListener('change', renderPeriodControls);
+    $('rep-student-filter').addEventListener('change', renderRows);
+    $('rep-class').addEventListener('change', () => {
         rep.activeSavedTermId = null;
         rep.rows = [];
         rep.visibleRows = [];
         rep.sessions = 0;
         renderRows();
         loadSavedTerms(Number($('rep-class').value || 0));
-        loadTermDefaults();
+        loadTermDefaults(Number($('rep-class').value || 0));
     });
-    on('rep-load', 'click', loadReport);
-    on('rep-save-term-drawer', 'click', saveCurrentTerm);
-    on('rep-save-all-term-defaults', 'click', saveAllTermDefaults);
-    on('rep-open-terms-drawer', 'click', openTermsDrawer);
-    on('rep-close-terms-drawer', 'click', closeTermsDrawer);
-    on('rep-terms-drawer-backdrop', 'click', closeTermsDrawer);
-    on('rep-csv', 'click', exportCsv);
-    on('rep-print', 'click', printReport);
+    $('rep-load').addEventListener('click', loadReport);
+    $('rep-save-term-drawer').addEventListener('click', saveCurrentTerm);
+    $('rep-save-term-default-drawer').addEventListener('click', () => saveTermDefault());
+    $('rep-save-all-term-defaults').addEventListener('click', saveAllTermDefaults);
+    $('rep-open-terms-drawer').addEventListener('click', openTermsDrawer);
+    $('rep-open-terms-drawer-2').addEventListener('click', openTermsDrawer);
+    $('rep-close-terms-drawer').addEventListener('click', closeTermsDrawer);
+    $('rep-terms-drawer-backdrop').addEventListener('click', closeTermsDrawer);
+    $('rep-csv').addEventListener('click', exportCsv);
+    $('rep-print').addEventListener('click', printReport);
 
     renderPeriodControls();
     renderSavedTerms();
     renderTermDefaultsDrawer();
-    loadTermDefaults();
+    loadTermDefaults(Number($('rep-class').value || 0));
     loadClasses().catch(() => {
         $('rep-class').innerHTML = '<option value="">Failed to load classes</option>';
     });
-</script>
-@endpush
+

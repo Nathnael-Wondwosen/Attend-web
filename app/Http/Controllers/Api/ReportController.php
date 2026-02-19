@@ -12,6 +12,516 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    protected const AUDIT_TERM_DEF_UPSERT = 'term_definition.upsert';
+    protected const AUDIT_TERM_DEF_STATUS = 'term_definition.status';
+
+    public function termDefinitions(Request $request)
+    {
+        $this->authorizeAdmin($request);
+
+        $data = $request->validate([
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        $query = DB::table('att_term_definitions')
+            ->orderByDesc('academic_year')
+            ->orderBy('term_order')
+            ->orderBy('id');
+
+        if (!empty($data['year'])) {
+            $query->where('academic_year', (int) $data['year']);
+        }
+
+        $rows = $query->get([
+            'id',
+            'academic_year',
+            'term_key',
+            'term_label',
+            'from_date',
+            'to_date',
+            'is_active',
+            'status',
+            'approved_by_admin_id',
+            'approved_at',
+            'locked_by_admin_id',
+            'locked_at',
+            'updated_at',
+        ])->map(function ($r) {
+            return [
+                'id' => (int) $r->id,
+                'academic_year' => (int) $r->academic_year,
+                'term_key' => (string) $r->term_key,
+                'term_label' => (string) ($r->term_label ?? strtoupper((string) $r->term_key)),
+                'from' => (string) $r->from_date,
+                'to' => (string) $r->to_date,
+                'is_active' => (bool) $r->is_active,
+                'status' => (string) ($r->status ?? 'draft'),
+                'approved_by_admin_id' => $r->approved_by_admin_id ? (int) $r->approved_by_admin_id : null,
+                'approved_at' => $r->approved_at ? Carbon::parse($r->approved_at)->toISOString() : null,
+                'locked_by_admin_id' => $r->locked_by_admin_id ? (int) $r->locked_by_admin_id : null,
+                'locked_at' => $r->locked_at ? Carbon::parse($r->locked_at)->toISOString() : null,
+                'updated_at' => $r->updated_at ? Carbon::parse($r->updated_at)->toISOString() : null,
+            ];
+        })->values();
+
+        return response()->json(['data' => $rows]);
+    }
+
+    public function upsertTermDefinition(Request $request, int $year, string $termKey)
+    {
+        $this->authorizeAdmin($request);
+        $year = (int) $year;
+        if ($year < 2000 || $year > 2100) {
+            return response()->json(['message' => 'Invalid year'], 422);
+        }
+
+        $termKey = strtolower(trim($termKey));
+        $allowed = ['t1', 't2', 't3', 't4', 'summer'];
+        if (!in_array($termKey, $allowed, true)) {
+            return response()->json(['message' => 'Invalid term key'], 422);
+        }
+
+        $data = $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+            'term_label' => ['nullable', 'string', 'max:120'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $from = Carbon::parse($data['from'])->toDateString();
+        $to = Carbon::parse($data['to'])->toDateString();
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $termOrderMap = ['t1' => 1, 't2' => 2, 't3' => 3, 't4' => 4, 'summer' => 5];
+        $label = trim((string) ($data['term_label'] ?? ($termKey === 'summer' ? 'Summer Class' : strtoupper($termKey))));
+        $active = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : true;
+
+        $existing = DB::table('att_term_definitions')
+            ->where('academic_year', $year)
+            ->where('term_key', $termKey)
+            ->first(['id', 'status', 'from_date', 'to_date', 'term_label', 'is_active']);
+
+        if ($existing && (string) ($existing->status ?? 'draft') === 'locked') {
+            return response()->json(['message' => 'This term is locked and cannot be edited'], 422);
+        }
+
+        // Validation: prevent overlapping active ranges with other active terms in the same year.
+        if ($active) {
+            $overlap = DB::table('att_term_definitions')
+                ->where('academic_year', $year)
+                ->where('term_key', '!=', $termKey)
+                ->where('is_active', 1)
+                ->where(function ($q) use ($from, $to) {
+                    $q->whereBetween('from_date', [$from, $to])
+                        ->orWhereBetween('to_date', [$from, $to])
+                        ->orWhere(function ($x) use ($from, $to) {
+                            $x->where('from_date', '<=', $from)->where('to_date', '>=', $to);
+                        });
+                })
+                ->first(['term_key', 'from_date', 'to_date']);
+
+            if ($overlap) {
+                return response()->json([
+                    'message' => "Date range overlaps with term {$overlap->term_key} ({$overlap->from_date} to {$overlap->to_date})",
+                ], 422);
+            }
+        }
+
+        $actorId = ($request->user() instanceof Admin) ? (int) $request->user()->id : null;
+        $now = now();
+        DB::table('att_term_definitions')->upsert(
+            [[
+                'academic_year' => $year,
+                'term_key' => $termKey,
+                'term_label' => $label,
+                'term_order' => $termOrderMap[$termKey],
+                'from_date' => $from,
+                'to_date' => $to,
+                'is_active' => $active ? 1 : 0,
+                'status' => $existing ? (string) ($existing->status ?? 'draft') : 'draft',
+                'updated_at' => $now,
+                'created_at' => $now,
+            ]],
+            ['academic_year', 'term_key'],
+            ['term_label', 'term_order', 'from_date', 'to_date', 'is_active', 'updated_at']
+        );
+
+        $this->audit($request, self::AUDIT_TERM_DEF_UPSERT, [
+            'academic_year' => $year,
+            'term_key' => $termKey,
+            'from' => $from,
+            'to' => $to,
+            'is_active' => $active,
+            'old' => $existing ? [
+                'from' => (string) $existing->from_date,
+                'to' => (string) $existing->to_date,
+                'term_label' => (string) $existing->term_label,
+                'is_active' => (bool) $existing->is_active,
+                'status' => (string) ($existing->status ?? 'draft'),
+            ] : null,
+            'actor_admin_id' => $actorId,
+        ]);
+
+        return response()->json([
+            'message' => 'Term definition saved',
+            'data' => [
+                'academic_year' => $year,
+                'term_key' => $termKey,
+                'term_label' => $label,
+                'from' => $from,
+                'to' => $to,
+                'is_active' => $active,
+            ],
+        ]);
+    }
+
+    public function setTermDefinitionStatus(Request $request, int $year, string $termKey)
+    {
+        $this->authorizeAdmin($request);
+        $year = (int) $year;
+        $termKey = strtolower(trim($termKey));
+        if ($year < 2000 || $year > 2100) {
+            return response()->json(['message' => 'Invalid year'], 422);
+        }
+        if (!in_array($termKey, ['t1', 't2', 't3', 't4', 'summer'], true)) {
+            return response()->json(['message' => 'Invalid term key'], 422);
+        }
+
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:draft,approved,locked'],
+        ]);
+        $newStatus = (string) $data['status'];
+
+        $row = DB::table('att_term_definitions')
+            ->where('academic_year', $year)
+            ->where('term_key', $termKey)
+            ->first(['id', 'status']);
+        if (!$row) {
+            return response()->json(['message' => 'Term definition not found'], 404);
+        }
+
+        $current = (string) ($row->status ?? 'draft');
+        if ($current === 'locked' && $newStatus !== 'locked') {
+            return response()->json(['message' => 'Locked term cannot transition back'], 422);
+        }
+
+        $user = $request->user();
+        $adminId = $user instanceof Admin ? (int) $user->id : null;
+        $updates = ['status' => $newStatus, 'updated_at' => now()];
+        if ($newStatus === 'approved') {
+            $updates['approved_by_admin_id'] = $adminId;
+            $updates['approved_at'] = now();
+        }
+        if ($newStatus === 'locked') {
+            $updates['locked_by_admin_id'] = $adminId;
+            $updates['locked_at'] = now();
+        }
+
+        DB::table('att_term_definitions')->where('id', (int) $row->id)->update($updates);
+
+        $this->audit($request, self::AUDIT_TERM_DEF_STATUS, [
+            'academic_year' => $year,
+            'term_key' => $termKey,
+            'from_status' => $current,
+            'to_status' => $newStatus,
+        ]);
+
+        return response()->json([
+            'message' => 'Status updated',
+            'data' => [
+                'academic_year' => $year,
+                'term_key' => $termKey,
+                'status' => $newStatus,
+            ],
+        ]);
+    }
+
+    public function savedTerms(Request $request, int $classId)
+    {
+        $this->authorizeUserForClass($request, $classId);
+
+        $rows = DB::table('att_saved_report_terms')
+            ->where('class_id', $classId)
+            ->where(function ($q) {
+                $q->whereNull('period_type')
+                    ->orWhere('period_type', '!=', 'semester_default');
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get([
+                'id',
+                'class_id',
+                'label',
+                'period_type',
+                'term_key',
+                'from_date',
+                'to_date',
+                'meta',
+                'created_by_admin_id',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(function ($r) {
+                return [
+                    'id' => (int) $r->id,
+                    'class_id' => (int) $r->class_id,
+                    'label' => (string) $r->label,
+                    'period_type' => $r->period_type ? (string) $r->period_type : null,
+                    'term_key' => $r->term_key ? (string) $r->term_key : null,
+                    'from' => (string) $r->from_date,
+                    'to' => (string) $r->to_date,
+                    'meta' => $r->meta ? json_decode((string) $r->meta, true) : null,
+                    'created_by_admin_id' => $r->created_by_admin_id ? (int) $r->created_by_admin_id : null,
+                    'created_at' => $r->created_at ? Carbon::parse($r->created_at)->toISOString() : null,
+                    'updated_at' => $r->updated_at ? Carbon::parse($r->updated_at)->toISOString() : null,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'class_id' => $classId,
+            'data' => $rows,
+        ]);
+    }
+
+    public function semesterDefaults(Request $request, int $classId)
+    {
+        $this->authorizeUserForClass($request, $classId);
+
+        $rows = DB::table('att_saved_report_terms')
+            ->where('class_id', $classId)
+            ->where('period_type', 'semester_default')
+            ->whereIn('term_key', ['t1', 't2', 't3', 't4', 'summer'])
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get([
+                'id',
+                'label',
+                'term_key',
+                'from_date',
+                'to_date',
+                'updated_at',
+            ]);
+
+        $defaults = [];
+        foreach ($rows as $r) {
+            $key = (string) $r->term_key;
+            if (isset($defaults[$key])) {
+                continue;
+            }
+            $defaults[$key] = [
+                'id' => (int) $r->id,
+                'label' => (string) ($r->label ?? $key),
+                'term_key' => $key,
+                'from' => (string) $r->from_date,
+                'to' => (string) $r->to_date,
+                'updated_at' => $r->updated_at ? Carbon::parse($r->updated_at)->toISOString() : null,
+            ];
+        }
+
+        return response()->json([
+            'class_id' => $classId,
+            'defaults' => $defaults,
+        ]);
+    }
+
+    public function upsertSemesterDefault(Request $request, int $classId, string $termKey)
+    {
+        $this->authorizeUserForClass($request, $classId);
+        $this->authorizeAdmin($request);
+
+        $termKey = strtolower(trim($termKey));
+        if (!in_array($termKey, ['t1', 't2', 't3', 't4', 'summer'], true)) {
+            return response()->json(['message' => 'Invalid term key'], 422);
+        }
+
+        $data = $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+            'label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $from = Carbon::parse($data['from'])->toDateString();
+        $to = Carbon::parse($data['to'])->toDateString();
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $label = trim((string) ($data['label'] ?? strtoupper($termKey)));
+        if ($label === '') {
+            $label = strtoupper($termKey);
+        }
+
+        $now = now();
+        $user = $request->user();
+        $adminId = $user instanceof Admin ? (int) $user->id : null;
+
+        $existing = DB::table('att_saved_report_terms')
+            ->where('class_id', $classId)
+            ->where('period_type', 'semester_default')
+            ->where('term_key', $termKey)
+            ->orderByDesc('id')
+            ->first(['id']);
+
+        if ($existing) {
+            DB::table('att_saved_report_terms')
+                ->where('id', (int) $existing->id)
+                ->update([
+                    'label' => $label,
+                    'from_date' => $from,
+                    'to_date' => $to,
+                    'updated_at' => $now,
+                ]);
+            $id = (int) $existing->id;
+        } else {
+            $id = (int) DB::table('att_saved_report_terms')->insertGetId([
+                'class_id' => $classId,
+                'label' => $label,
+                'period_type' => 'semester_default',
+                'term_key' => $termKey,
+                'from_date' => $from,
+                'to_date' => $to,
+                'meta' => null,
+                'created_by_admin_id' => $adminId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Term default saved',
+            'default' => [
+                'id' => $id,
+                'class_id' => $classId,
+                'term_key' => $termKey,
+                'label' => $label,
+                'from' => $from,
+                'to' => $to,
+            ],
+        ]);
+    }
+
+    public function storeSavedTerm(Request $request, int $classId)
+    {
+        $this->authorizeUserForClass($request, $classId);
+        $this->authorizeAdmin($request);
+
+        $data = $request->validate([
+            'label' => ['required', 'string', 'max:120'],
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date'],
+            'period_type' => ['nullable', 'string', 'max:32'],
+            'term_key' => ['nullable', 'string', 'max:32'],
+            'meta' => ['nullable', 'array'],
+        ]);
+
+        $from = Carbon::parse($data['from'])->toDateString();
+        $to = Carbon::parse($data['to'])->toDateString();
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $user = $request->user();
+        $adminId = $user instanceof Admin ? (int) $user->id : null;
+        $now = now();
+
+        $id = DB::table('att_saved_report_terms')->insertGetId([
+            'class_id' => $classId,
+            'label' => (string) $data['label'],
+            'period_type' => $data['period_type'] ?? null,
+            'term_key' => $data['term_key'] ?? null,
+            'from_date' => $from,
+            'to_date' => $to,
+            'meta' => isset($data['meta']) ? json_encode($data['meta']) : null,
+            'created_by_admin_id' => $adminId,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return response()->json([
+            'message' => 'Saved term created',
+            'saved_term' => [
+                'id' => (int) $id,
+                'class_id' => (int) $classId,
+                'label' => (string) $data['label'],
+                'period_type' => $data['period_type'] ?? null,
+                'term_key' => $data['term_key'] ?? null,
+                'from' => $from,
+                'to' => $to,
+                'meta' => $data['meta'] ?? null,
+            ],
+        ], 201);
+    }
+
+    public function deleteSavedTerm(Request $request, int $savedTermId)
+    {
+        $this->authorizeAdmin($request);
+
+        $exists = DB::table('att_saved_report_terms')->where('id', $savedTermId)->exists();
+        if (!$exists) {
+            abort(404, 'Saved term not found');
+        }
+
+        DB::table('att_saved_report_terms')->where('id', $savedTermId)->delete();
+
+        return response()->json(['message' => 'Saved term deleted']);
+    }
+
+    public function updateSavedTerm(Request $request, int $savedTermId)
+    {
+        $this->authorizeAdmin($request);
+
+        $row = DB::table('att_saved_report_terms')->where('id', $savedTermId)->first();
+        if (!$row) {
+            abort(404, 'Saved term not found');
+        }
+
+        $this->authorizeUserForClass($request, (int) $row->class_id);
+
+        $data = $request->validate([
+            'label' => ['nullable', 'string', 'max:120'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+            'period_type' => ['nullable', 'string', 'max:32'],
+            'term_key' => ['nullable', 'string', 'max:32'],
+            'meta' => ['nullable', 'array'],
+        ]);
+
+        $from = isset($data['from']) ? Carbon::parse($data['from'])->toDateString() : (string) $row->from_date;
+        $to = isset($data['to']) ? Carbon::parse($data['to'])->toDateString() : (string) $row->to_date;
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        DB::table('att_saved_report_terms')
+            ->where('id', $savedTermId)
+            ->update([
+                'label' => array_key_exists('label', $data) ? (string) $data['label'] : (string) $row->label,
+                'period_type' => array_key_exists('period_type', $data) ? $data['period_type'] : $row->period_type,
+                'term_key' => array_key_exists('term_key', $data) ? $data['term_key'] : $row->term_key,
+                'from_date' => $from,
+                'to_date' => $to,
+                'meta' => array_key_exists('meta', $data) ? json_encode($data['meta']) : $row->meta,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'message' => 'Saved term updated',
+            'saved_term' => [
+                'id' => (int) $savedTermId,
+                'class_id' => (int) $row->class_id,
+                'label' => array_key_exists('label', $data) ? (string) $data['label'] : (string) $row->label,
+                'period_type' => array_key_exists('period_type', $data) ? $data['period_type'] : $row->period_type,
+                'term_key' => array_key_exists('term_key', $data) ? $data['term_key'] : $row->term_key,
+                'from' => $from,
+                'to' => $to,
+                'meta' => array_key_exists('meta', $data) ? $data['meta'] : ($row->meta ? json_decode((string) $row->meta, true) : null),
+            ],
+        ]);
+    }
+
     public function classDay(Request $request, int $classId)
     {
         $this->authorizeUserForClass($request, $classId);
@@ -206,6 +716,7 @@ class ReportController extends Controller
 
             $total = $sessionCount;
             $rate = $total > 0 ? round(($present * 100.0) / $total, 1) : null;
+            $attendanceMark = $rate;
 
             return [
                 'student_id' => $sid,
@@ -216,6 +727,7 @@ class ReportController extends Controller
                 'unmarked' => $unmarked,
                 'total_days' => $total,
                 'present_rate' => $rate,
+                'attendance_mark_percent' => $attendanceMark,
             ];
         })->values();
 
@@ -229,7 +741,7 @@ class ReportController extends Controller
                 if ($out === false) {
                     return;
                 }
-                fputcsv($out, ['from', 'to', 'class_id', 'class_name', 'sessions', 'student_id', 'full_name', 'present', 'permission', 'absent', 'unmarked', 'total_days', 'present_rate']);
+                fputcsv($out, ['from', 'to', 'class_id', 'class_name', 'sessions', 'student_id', 'full_name', 'present', 'permission', 'absent', 'unmarked', 'total_days', 'present_rate', 'attendance_mark_percent']);
                 foreach ($perStudent as $row) {
                     fputcsv($out, [
                         $from,
@@ -245,6 +757,7 @@ class ReportController extends Controller
                         $row['unmarked'],
                         $row['total_days'],
                         $row['present_rate'],
+                        $row['attendance_mark_percent'],
                     ]);
                 }
                 fclose($out);
@@ -599,5 +1112,41 @@ class ReportController extends Controller
         }
 
         abort(403, 'Forbidden');
+    }
+
+    protected function authorizeAdmin(Request $request): void
+    {
+        if (!$request->user() instanceof Admin) {
+            abort(403, 'Admin only');
+        }
+    }
+
+    protected function audit(Request $request, string $action, array $meta = []): void
+    {
+        $user = $request->user();
+        $actorType = 'system';
+        $actorId = null;
+
+        if ($user instanceof Admin) {
+            $actorType = 'admin';
+            $actorId = (int) $user->id;
+        } elseif ($user instanceof AttTeacherAccount) {
+            $actorType = 'teacher';
+            $actorId = (int) $user->id;
+        }
+
+        DB::table('att_audit_logs')->insert([
+            'session_id' => null,
+            'class_id' => null,
+            'student_id' => null,
+            'attendance_id' => null,
+            'action' => $action,
+            'meta' => !empty($meta) ? json_encode($meta) : null,
+            'actor_type' => $actorType,
+            'actor_id' => $actorId,
+            'ip' => (string) $request->ip(),
+            'user_agent' => substr((string) ($request->userAgent() ?? ''), 0, 255),
+            'created_at' => now(),
+        ]);
     }
 }

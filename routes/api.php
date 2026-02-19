@@ -13,46 +13,7 @@ use App\Http\Controllers\Api\MobileSyncController;
 use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\TakeTokenController;
 use App\Http\Controllers\Api\PublicTakeAttendanceController;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
-
-// Rate limits
-RateLimiter::for('auth', function (Request $request) {
-    return Limit::perMinute(10)->by($request->ip());
-});
-
-RateLimiter::for('scan', function (Request $request) {
-    // Old behavior throttled the whole session together, which hurts real-world
-    // "everyone scans at once" flows. Throttle per student per session instead,
-    // with a generous per-session ceiling as a safety net.
-    $sessionId = (string) ($request->route('session') ?? $request->input('session_id') ?? 'unknown');
-    $studentId = (string) ($request->input('student_id') ?? 'unknown');
-    $ip = (string) $request->ip();
-
-    return [
-        // Prevent a single device from spamming scans for the same session.
-        Limit::perMinute(60)->by("scan:{$sessionId}:student:{$studentId}"),
-        // Keep the session responsive during peak scan times; mainly a DOS guard.
-        Limit::perMinute(3000)->by("scan:{$sessionId}"),
-        // Basic IP guard.
-        Limit::perMinute(600)->by("scan:ip:{$ip}"),
-    ];
-});
-
-RateLimiter::for('take', function (Request $request) {
-    // Public take-attendance endpoints can be hit without auth (by design in this project right now).
-    // Keep a reasonable per-IP limit to prevent accidental or malicious flooding.
-    $ip = (string) $request->ip();
-    return Limit::perMinute(240)->by("take:ip:{$ip}");
-});
-
-RateLimiter::for('mobile', function (Request $request) {
-    $u = $request->user();
-    $key = $u ? ('mobile:user:'.$u->getAuthIdentifier()) : ('mobile:ip:'.$request->ip());
-    return Limit::perMinute(240)->by($key);
-});
 
 Route::prefix('v1')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth');
@@ -129,9 +90,18 @@ Route::prefix('v1')->group(function () {
         Route::get('activity', [StatsController::class, 'activity']);
 
         // reports
+        Route::get('reports/term-definitions', [ReportController::class, 'termDefinitions']);
+        Route::put('reports/term-definitions/{year}/{termKey}', [ReportController::class, 'upsertTermDefinition']);
+        Route::patch('reports/term-definitions/{year}/{termKey}/status', [ReportController::class, 'setTermDefinitionStatus']);
         Route::get('reports/class/{class}/day', [ReportController::class, 'classDay']);
         Route::get('reports/class/{class}/range', [ReportController::class, 'classRange']);
         Route::get('reports/class/{class}/trend', [ReportController::class, 'classTrend']);
+        Route::get('reports/class/{class}/saved-terms', [ReportController::class, 'savedTerms']);
+        Route::post('reports/class/{class}/saved-terms', [ReportController::class, 'storeSavedTerm']);
+        Route::get('reports/class/{class}/semester-defaults', [ReportController::class, 'semesterDefaults']);
+        Route::put('reports/class/{class}/semester-defaults/{termKey}', [ReportController::class, 'upsertSemesterDefault']);
+        Route::patch('reports/saved-terms/{savedTerm}', [ReportController::class, 'updateSavedTerm']);
+        Route::delete('reports/saved-terms/{savedTerm}', [ReportController::class, 'deleteSavedTerm']);
         Route::get('reports/student/{student}/detail', [ReportController::class, 'studentDetail']);
         
         // advanced analytics
