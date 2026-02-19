@@ -5,70 +5,92 @@
 @section('page-title', 'Classes')
 @section('page-subtitle', 'Browse classes, open rosters, and review student attendance.')
 
+@push('head')
+<style>
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+@endpush
+
 @section('content')
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-        <div class="glass card-accent rounded-2xl p-4 shadow-glow">
-            <p class="text-slate-300 text-sm mb-1">Classes</p>
-            <p class="text-3xl text-white font-medium" id="stat-total">—</p>
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+        <div class="glass card-accent rounded-xl p-3 shadow-glow">
+            <p class="text-slate-300 text-xs mb-1">Classes</p>
+            <p class="text-2xl text-white font-medium leading-none" id="stat-total">—</p>
             <p class="text-xs text-slate-400 mt-1">Total in roster</p>
         </div>
-        <div class="glass card-accent rounded-2xl p-4 shadow-glow">
-            <p class="text-slate-300 text-sm mb-1">Active Sessions</p>
-            <p class="text-3xl text-white font-medium" id="stat-active">—</p>
+        <div class="glass card-accent rounded-xl p-3 shadow-glow">
+            <p class="text-slate-300 text-xs mb-1">Active Sessions</p>
+            <p class="text-2xl text-white font-medium leading-none" id="stat-active">—</p>
             <p class="text-xs text-slate-400 mt-1">Classes with an open session</p>
         </div>
-        <div class="glass card-accent rounded-2xl p-4 shadow-glow">
-            <p class="text-slate-300 text-sm mb-1">Teachers</p>
-            <p class="text-3xl text-white font-medium" id="stat-teachers">—</p>
+        <div class="glass card-accent rounded-xl p-3 shadow-glow">
+            <p class="text-slate-300 text-xs mb-1">Teachers</p>
+            <p class="text-2xl text-white font-medium leading-none" id="stat-teachers">—</p>
             <p class="text-xs text-slate-400 mt-1">Assigned owners</p>
         </div>
-        <div class="glass card-accent rounded-2xl p-4 shadow-glow">
-            <p class="text-slate-300 text-sm mb-1">Avg Attendance</p>
-            <p class="text-3xl text-white font-medium" id="stat-attendance">—</p>
+        <div class="glass card-accent rounded-xl p-3 shadow-glow">
+            <p class="text-slate-300 text-xs mb-1">Avg Attendance</p>
+            <p class="text-2xl text-white font-medium leading-none" id="stat-attendance">—</p>
             <p class="text-xs text-slate-400 mt-1">Last 30 days (present rate)</p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mt-6">
-        <div class="lg:col-span-5 glass rounded-2xl p-4 md:p-6 shadow-glow">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 mt-4">
+        <div class="lg:col-span-5 glass rounded-xl p-3 md:p-4 shadow-glow">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <div>
                     <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Browse</p>
                     <h3 class="text-lg text-white font-medium">Class list</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="classes-refresh" class="h-10 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
+                    <button id="classes-refresh" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
                         <i class="fas fa-rotate"></i><span class="text-sm">Refresh</span>
                     </button>
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <div class="flex flex-col sm:flex-row gap-2 mb-3">
                 <div class="relative flex-1">
-                    <input id="class-search" type="text" placeholder="Search by class or teacher" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" />
+                    <input id="class-search" type="text" placeholder="Search by class or teacher" class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" />
                     <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                 </div>
-                <select id="class-sort" class="rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                <select id="class-sort" class="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
                     <option value="grade">Sort: Grade</option>
                     <option value="students">Sort: Students</option>
                     <option value="attendance">Sort: Attendance</option>
                 </select>
             </div>
 
-            <div class="glass rounded-2xl border border-white/5 overflow-hidden">
-                <div class="hidden lg:grid grid-cols-12 px-4 py-3 bg-white/5 text-xs text-slate-300">
+            <div class="glass rounded-xl border border-white/5 overflow-hidden">
+                <div class="hidden lg:grid grid-cols-12 px-3 py-2 bg-white/5 text-[11px] text-slate-300 sticky top-0 z-10">
                     <span class="col-span-7">Class</span>
                     <span class="col-span-3">Students</span>
                     <span class="col-span-2 text-right">30d</span>
                 </div>
-                <div id="class-list" class="divide-y divide-white/5 min-h-[240px]">
+                <div id="class-list" class="divide-y divide-white/5 min-h-[220px] max-h-[62vh] overflow-y-auto no-scrollbar">
                     <p class="text-slate-400 text-sm px-4 py-3">Loading classes...</p>
+                </div>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span id="class-page-summary">0 classes</span>
+                <div class="flex items-center gap-2">
+                    <label for="class-page-size" class="text-slate-400">Rows</label>
+                    <select id="class-page-size" class="h-8 rounded-md bg-white/5 border border-white/10 px-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="40">40</option>
+                        <option value="80">80</option>
+                    </select>
+                    <button id="class-page-prev" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed" type="button">Prev</button>
+                    <span id="class-page-indicator" class="min-w-[64px] text-center">1 / 1</span>
+                    <button id="class-page-next" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed" type="button">Next</button>
                 </div>
             </div>
         </div>
 
-        <div class="lg:col-span-7 space-y-4 md:space-y-6">
-            <div class="glass rounded-2xl p-4 md:p-6 shadow-glow">
+        <div class="lg:col-span-7 space-y-3 md:space-y-4">
+            <div class="glass rounded-xl p-3 md:p-4 shadow-glow">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Selected</p>
@@ -76,33 +98,33 @@
                         <p class="text-sm text-slate-400 mt-1" id="selected-class-meta">Roster and attendance details appear here.</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a id="jump-attendance" href="{{ route('admin.attendance') }}" class="h-10 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
+                        <a id="jump-attendance" href="{{ route('admin.attendance') }}" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring flex items-center gap-2">
                             <i class="fas fa-calendar-check"></i><span class="text-sm">Attendance</span>
                         </a>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                    <div class="glass rounded-xl p-3 border border-white/5">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                    <div class="glass rounded-lg p-2.5 border border-white/5">
                         <p class="text-xs text-slate-400">Teacher</p>
                         <p class="text-white text-sm font-medium mt-1" id="selected-class-teacher">—</p>
                     </div>
-                    <div class="glass rounded-xl p-3 border border-white/5">
+                    <div class="glass rounded-lg p-2.5 border border-white/5">
                         <p class="text-xs text-slate-400">Students</p>
                         <p class="text-white text-sm font-medium mt-1" id="selected-class-students">—</p>
                     </div>
-                    <div class="glass rounded-xl p-3 border border-white/5">
+                    <div class="glass rounded-lg p-2.5 border border-white/5">
                         <p class="text-xs text-slate-400">Status</p>
                         <p class="text-white text-sm font-medium mt-1" id="selected-class-status">—</p>
                     </div>
-                    <div class="glass rounded-xl p-3 border border-white/5">
+                    <div class="glass rounded-lg p-2.5 border border-white/5">
                         <p class="text-xs text-slate-400">30d Present</p>
                         <p class="text-white text-sm font-medium mt-1" id="selected-class-attendance">—</p>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
-                <div class="glass rounded-2xl p-4 md:p-6 shadow-glow">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
+                <div class="glass rounded-xl p-3 md:p-4 shadow-glow">
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <div>
                             <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Roster</p>
@@ -110,16 +132,16 @@
                         </div>
                         <span id="roster-count" class="text-xs text-slate-400">—</span>
                     </div>
-                    <div class="relative mb-3">
-                        <input id="student-search" type="text" placeholder="Search students" class="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" disabled />
+                    <div class="relative mb-2">
+                        <input id="student-search" type="text" placeholder="Search students" class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60" disabled />
                         <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     </div>
-                    <div id="roster-list" class="space-y-2 min-h-[240px]">
+                    <div id="roster-list" class="space-y-1.5 min-h-[220px] max-h-[52vh] overflow-y-auto no-scrollbar">
                         <p class="text-slate-400 text-sm">Select a class to load students.</p>
                     </div>
                 </div>
 
-                <div class="glass rounded-2xl p-4 md:p-6 shadow-glow">
+                <div class="glass rounded-xl p-3 md:p-4 shadow-glow">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Student</p>
@@ -132,20 +154,20 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3 mt-4">
-                        <div class="glass rounded-xl p-3 border border-white/5">
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <div class="glass rounded-lg p-2.5 border border-white/5">
                             <p class="text-xs text-slate-400">Present (30d)</p>
                             <p class="text-white text-sm font-medium mt-1" id="student-present">—</p>
                         </div>
-                        <div class="glass rounded-xl p-3 border border-white/5">
+                        <div class="glass rounded-lg p-2.5 border border-white/5">
                             <p class="text-xs text-slate-400">Absent (30d)</p>
                             <p class="text-white text-sm font-medium mt-1" id="student-absent">—</p>
                         </div>
-                        <div class="glass rounded-xl p-3 border border-white/5">
+                        <div class="glass rounded-lg p-2.5 border border-white/5">
                             <p class="text-xs text-slate-400">Permission (30d)</p>
                             <p class="text-white text-sm font-medium mt-1" id="student-permission">—</p>
                         </div>
-                        <div class="glass rounded-xl p-3 border border-white/5">
+                        <div class="glass rounded-lg p-2.5 border border-white/5">
                             <p class="text-xs text-slate-400">Total (30d)</p>
                             <p class="text-white text-sm font-medium mt-1" id="student-total">—</p>
                         </div>
@@ -153,7 +175,7 @@
 
                     <div class="mt-4">
                         <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Recent</p>
-                        <div id="student-recent" class="mt-2 space-y-2 min-h-[120px]">
+                        <div id="student-recent" class="mt-2 space-y-1.5 min-h-[120px] max-h-[35vh] overflow-y-auto no-scrollbar">
                             <p class="text-slate-400 text-sm">No student selected.</p>
                         </div>
                     </div>
@@ -169,6 +191,8 @@
         classes: [],
         filtered: [],
         selectedClass: null,
+        classPage: 1,
+        classPageSize: 20,
         roster: [],
         rosterFiltered: [],
         selectedStudent: null,
@@ -207,15 +231,38 @@
 
     const renderClassList = () => {
         const list = document.getElementById('class-list');
-        if (!clsState.filtered.length) {
+        const total = clsState.filtered.length;
+        const pageSize = Math.max(1, Number(clsState.classPageSize) || 20);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        clsState.classPage = Math.min(Math.max(1, clsState.classPage), totalPages);
+        const startIdx = (clsState.classPage - 1) * pageSize;
+        const pageRows = clsState.filtered.slice(startIdx, startIdx + pageSize);
+
+        const summary = document.getElementById('class-page-summary');
+        const indicator = document.getElementById('class-page-indicator');
+        const prev = document.getElementById('class-page-prev');
+        const next = document.getElementById('class-page-next');
+        if (summary) {
+            if (!total) {
+                summary.textContent = '0 classes';
+            } else {
+                const to = Math.min(startIdx + pageRows.length, total);
+                summary.textContent = `Showing ${startIdx + 1}-${to} of ${total}`;
+            }
+        }
+        if (indicator) indicator.textContent = `${clsState.classPage} / ${totalPages}`;
+        if (prev) prev.disabled = clsState.classPage <= 1;
+        if (next) next.disabled = clsState.classPage >= totalPages;
+
+        if (!total) {
             list.innerHTML = '<p class="text-slate-400 text-sm px-4 py-3">No classes found.</p>';
             return;
         }
 
-        list.innerHTML = clsState.filtered.map(c => `
-            <button class="w-full text-left grid grid-cols-1 lg:grid-cols-12 px-4 py-3 gap-2 lg:gap-0 hover:bg-white/5 transition ${clsState.selectedClass && String(clsState.selectedClass.id) === String(c.id) ? 'bg-white/10' : ''}" data-class="${c.id}">
-                <div class="lg:col-span-7 flex items-start gap-3">
-                    <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-primary via-neon to-mint flex items-center justify-center text-midnight text-sm">
+        list.innerHTML = pageRows.map(c => `
+            <button class="w-full text-left grid grid-cols-1 lg:grid-cols-12 px-3 py-2 gap-2 lg:gap-0 hover:bg-white/5 transition ${clsState.selectedClass && String(clsState.selectedClass.id) === String(c.id) ? 'bg-white/10' : ''}" data-class="${c.id}">
+                <div class="lg:col-span-7 flex items-start gap-2.5 min-w-0">
+                    <div class="h-8 w-8 rounded-lg bg-gradient-to-br from-primary via-neon to-mint flex items-center justify-center text-midnight text-xs">
                         ${(c.grade ? `G${c.grade}` : 'C').slice(0,2)}
                     </div>
                     <div>
@@ -223,8 +270,8 @@
                         <p class="text-xs text-slate-400">${c.teacher_name || 'Unassigned'}</p>
                     </div>
                 </div>
-                <div class="lg:col-span-3 text-slate-200 flex items-center">${c.students_count ?? 0}</div>
-                <div class="lg:col-span-2 flex lg:justify-end items-center text-slate-200">${fmtPct(c.attendance_rate)}</div>
+                <div class="lg:col-span-3 text-slate-200 flex items-center text-sm">${c.students_count ?? 0}</div>
+                <div class="lg:col-span-2 flex lg:justify-end items-center text-slate-200 text-sm">${fmtPct(c.attendance_rate)}</div>
             </button>
         `).join('');
 
@@ -251,6 +298,7 @@
         if (sort === 'grade') base.sort((a,b) => (Number(a.grade)||999) - (Number(b.grade)||999) || (String(a.section||'').localeCompare(String(b.section||''))));
 
         clsState.filtered = base;
+        clsState.classPage = 1;
         renderClassList();
     };
 
@@ -286,7 +334,7 @@
         }
 
         wrap.innerHTML = students.map(s => `
-            <button class="w-full text-left glass rounded-xl px-3 py-2 border border-white/5 hover:bg-white/10 transition flex items-center justify-between gap-3 ${clsState.selectedStudent && String(clsState.selectedStudent.id) === String(s.id) ? 'bg-white/10' : ''}" data-student="${s.id}">
+            <button class="w-full text-left glass rounded-lg px-3 py-2 border border-white/5 hover:bg-white/10 transition flex items-center justify-between gap-3 ${clsState.selectedStudent && String(clsState.selectedStudent.id) === String(s.id) ? 'bg-white/10' : ''}" data-student="${s.id}">
                 <div>
                     <p class="text-white">${s.full_name || 'Student'}</p>
                     <p class="text-xs text-slate-400">${s.gender ? s.gender : ''}${s.current_grade ? ` • Grade ${s.current_grade}` : ''}</p>
@@ -356,7 +404,7 @@
         };
 
         recentWrap.innerHTML = rows.slice(0, 12).map(r => `
-            <div class="glass rounded-xl px-3 py-2 border border-white/5 flex items-center justify-between gap-3">
+            <div class="glass rounded-lg px-3 py-2 border border-white/5 flex items-center justify-between gap-3">
                 <div>
                     <p class="text-white text-sm">${(window.FinotDate && r.attendance_date) ? window.FinotDate.formatDate(r.attendance_date) : (r.attendance_date || '—')}</p>
                     <p class="text-xs text-slate-400">${r.workflow_status === 'submitted' ? 'Submitted' : 'Draft'}${r.note ? ` • ${r.note}` : ''}</p>
@@ -445,6 +493,20 @@
 
     document.getElementById('class-search')?.addEventListener('input', applyClassFilter);
     document.getElementById('class-sort')?.addEventListener('change', applyClassFilter);
+    document.getElementById('class-page-size')?.addEventListener('change', (e) => {
+        clsState.classPageSize = Number(e.target.value) || 20;
+        clsState.classPage = 1;
+        renderClassList();
+    });
+    document.getElementById('class-page-prev')?.addEventListener('click', () => {
+        clsState.classPage = Math.max(1, clsState.classPage - 1);
+        renderClassList();
+    });
+    document.getElementById('class-page-next')?.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(clsState.filtered.length / Math.max(1, Number(clsState.classPageSize) || 20)));
+        clsState.classPage = Math.min(totalPages, clsState.classPage + 1);
+        renderClassList();
+    });
     document.getElementById('classes-refresh')?.addEventListener('click', loadClasses);
     document.getElementById('student-search')?.addEventListener('input', applyStudentFilter);
     document.addEventListener('finot:dateprefs', () => {
@@ -454,3 +516,4 @@
     loadClasses();
 </script>
 @endpush
+

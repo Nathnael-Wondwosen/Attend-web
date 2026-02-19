@@ -5,74 +5,94 @@
 @section('page-title', 'Teacher Accounts')
 @section('page-subtitle', 'Create and manage teacher login accounts for the attendance mobile app')
 
+@push('head')
+<style>
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+@endpush
+
 @section('content')
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
-        <div class="xl:col-span-2 glass rounded-2xl p-4 md:p-6 shadow-glow flex flex-col gap-4">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-3">
+        <div class="xl:col-span-2 glass rounded-xl p-3 shadow-glow flex flex-col gap-2.5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
                 <div>
                     <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Directory</p>
-                    <h3 class="text-lg text-white font-medium">Accounts</h3>
+                    <h3 class="text-base text-white font-medium">Accounts</h3>
                 </div>
-                <div class="flex items-center gap-3">
-                    <input id="acct-search" type="text" placeholder="Search teacher/username" class="rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60 w-full md:w-72" />
-                    <button id="acct-new" type="button" class="h-11 px-4 rounded-xl neon-pill text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <input id="acct-search" type="text" placeholder="Search teacher/username" class="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-neon/60 w-full md:w-72" />
+                    <button id="acct-new" type="button" class="h-8 px-3 rounded-lg neon-pill text-xs font-medium flex items-center gap-1.5 whitespace-nowrap">
                         <i class="fas fa-plus"></i><span>New</span>
                     </button>
                 </div>
             </div>
 
-            <div class="glass rounded-2xl border border-white/5 overflow-hidden">
-                <div class="hidden lg:grid grid-cols-12 px-4 py-3 bg-white/5 text-xs text-slate-300">
-                    <span class="col-span-4">Teacher</span>
-                    <span class="col-span-2">Username</span>
+            <div class="glass rounded-xl border border-white/5 overflow-hidden">
+                <div class="hidden lg:grid grid-cols-12 px-3 py-2 bg-white/5 text-[11px] text-slate-300 sticky top-0 z-10">
+                    <span class="col-span-6">Username</span>
                     <span class="col-span-2">Classes</span>
-                    <span class="col-span-2">Last Login</span>
-                    <span class="col-span-1">Status</span>
-                    <span class="col-span-1 text-right">Actions</span>
+                    <span class="col-span-2">Status</span>
+                    <span class="col-span-2 text-right">Actions</span>
                 </div>
-                <div id="acct-list" class="divide-y divide-white/5 min-h-[160px]">
+                <div id="acct-list" class="divide-y divide-white/5 min-h-[180px] max-h-[60vh] overflow-y-auto no-scrollbar">
                     <p class="text-slate-400 text-sm px-4 py-3">Loading...</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 pt-1">
+                <span id="acct-page-summary">0 accounts</span>
+                <div class="flex items-center gap-2">
+                    <label for="acct-page-size" class="text-slate-400">Rows</label>
+                    <select id="acct-page-size" class="h-8 rounded-md bg-white/5 border border-white/10 px-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="40">40</option>
+                        <option value="80">80</option>
+                    </select>
+                    <button id="acct-page-prev" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed" type="button">Prev</button>
+                    <span id="acct-page-indicator" class="min-w-[64px] text-center">1 / 1</span>
+                    <button id="acct-page-next" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed" type="button">Next</button>
                 </div>
             </div>
         </div>
 
-        <div class="glass rounded-2xl p-4 md:p-6 shadow-glow flex flex-col gap-4">
+        <div class="glass rounded-xl p-3 shadow-glow flex flex-col gap-2.5">
             <div>
                 <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Create</p>
-                <h3 class="text-lg text-white font-medium">New teacher account</h3>
+                <h3 class="text-base text-white font-medium">New teacher account</h3>
             </div>
 
-            <div class="space-y-3 text-sm text-slate-200">
+            <div class="space-y-2.5 text-sm text-slate-200">
                 <div>
-                    <label class="text-xs text-slate-400">Teacher</label>
-                    <select id="new-teacher" class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
+                    <label class="text-xs text-slate-400 mb-1 block">Teacher</label>
+                    <select id="new-teacher" class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60">
                         <option value="">Select teacher</option>
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400">Assign classes (optional)</label>
-                    <select id="new-classes" multiple class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60 min-h-[120px]">
+                    <label class="text-xs text-slate-400 mb-1 block">Assign classes (optional)</label>
+                    <select id="new-classes" multiple class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60 min-h-[96px]">
                     </select>
                     <p class="text-xs text-slate-400 mt-1">Hold Ctrl (Windows) to select multiple.</p>
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400">Username</label>
-                    <input id="new-username" type="text" class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" placeholder="e.g. teacher10a" />
+                    <label class="text-xs text-slate-400 mb-1 block">Username</label>
+                    <input id="new-username" type="text" class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" placeholder="e.g. teacher10a" />
                 </div>
                 <div>
-                    <label class="text-xs text-slate-400">Password (optional)</label>
-                    <input id="new-password" type="text" class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" placeholder="Leave empty to auto-generate" />
+                    <label class="text-xs text-slate-400 mb-1 block">Password (optional)</label>
+                    <input id="new-password" type="text" class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60" placeholder="Leave empty to auto-generate" />
                 </div>
-                <button id="new-create" type="button" class="w-full neon-pill rounded-xl px-4 py-3 text-left flex items-center gap-3">
+                <button id="new-create" type="button" class="w-full h-9 neon-pill rounded-lg px-3 text-left text-sm flex items-center gap-2">
                     <i class="fas fa-user-plus"></i><span>Create account</span>
                 </button>
             </div>
 
-            <div id="pw-box" class="glass rounded-xl p-4 border border-white/5 hidden">
+            <div id="pw-box" class="glass rounded-lg p-3 border border-white/5 hidden">
                 <p class="text-xs text-slate-400 mb-2">Generated password (show once)</p>
                 <div class="flex items-center gap-2">
                     <code id="pw-value" class="flex-1 px-3 py-2 rounded-lg bg-white/5 text-slate-200 text-xs overflow-auto"></code>
-                    <button id="pw-copy" type="button" class="h-10 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring">Copy</button>
+                    <button id="pw-copy" type="button" class="h-8 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring">Copy</button>
                 </div>
                 <p class="text-xs text-slate-400 mt-2">Share this securely with the teacher.</p>
             </div>
@@ -81,6 +101,58 @@
             <div id="acct-error" class="text-sm text-red-300"></div>
         </div>
     </div>
+
+    <div id="acct-detail-backdrop" class="fixed inset-0 bg-black/60 hidden z-[90]"></div>
+    <aside id="acct-detail-drawer" class="fixed inset-y-0 right-0 h-screen w-full max-w-md glass border-l border-white/10 shadow-glow z-[91] transform translate-x-full transition-transform duration-200 ease-out">
+        <div class="h-full flex flex-col p-4 overflow-hidden">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Account Detail</p>
+                    <h3 id="acct-detail-username" class="text-base text-white font-medium">Username</h3>
+                    <div class="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <p id="acct-detail-name" class="text-slate-400">Teacher</p>
+                        <span id="acct-detail-status-chip" class="px-2 py-0.5 rounded-full bg-white/5 text-slate-200">--</span>
+                        <span id="acct-detail-teacher-chip" class="px-2 py-0.5 rounded-full bg-white/5 text-slate-300">ID --</span>
+                    </div>
+                </div>
+                <button id="acct-detail-close" class="h-9 w-9 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3 pr-1">
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="glass rounded-lg p-2 border border-white/5">
+                        <p class="text-slate-400">Classes</p>
+                        <p id="acct-detail-classes-count" class="text-slate-200 mt-1">--</p>
+                    </div>
+                    <div class="glass rounded-lg p-2 border border-white/5">
+                        <p class="text-slate-400">Last Login</p>
+                        <p id="acct-detail-last-login" class="text-slate-200 mt-1">--</p>
+                    </div>
+                </div>
+
+                <div class="glass rounded-lg p-2 border border-white/5">
+                    <p class="text-xs text-slate-400">Created</p>
+                    <p id="acct-detail-created" class="text-xs text-slate-200 mt-1">--</p>
+                </div>
+
+                <div class="glass rounded-lg p-2 border border-white/5">
+                    <p class="text-xs text-slate-400 mb-2">Assigned classes</p>
+                    <div id="acct-detail-classes" class="grid grid-cols-2 gap-1.5 text-xs text-slate-200">
+                        <p class="text-slate-400 col-span-2">Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 pb-2 border-t border-white/10 grid grid-cols-2 gap-2 sticky bottom-2 bg-midnight/80 backdrop-blur-sm">
+                <button id="acct-detail-edit-classes" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-xs">Edit classes</button>
+                <button id="acct-detail-toggle" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-xs">Enable/Disable</button>
+                <button id="acct-detail-reset" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring text-xs">Change password</button>
+                <button id="acct-detail-take" class="h-9 px-3 rounded-lg neon-pill text-xs">Generate link</button>
+            </div>
+        </div>
+    </aside>
 @endsection
 
 @push('scripts')
@@ -90,6 +162,10 @@
         teachers: [],
         classes: [],
         filter: '',
+        page: 1,
+        pageSize: 20,
+        detailAccountId: null,
+        detailClassIds: [],
     };
 
     const el = (id) => document.getElementById(id);
@@ -110,21 +186,12 @@
 
     const pill = (status) => {
         const map = { active: 'text-neon', disabled: 'text-slate-400' };
-        const copy = (status || '—').toString();
+        const copy = (status || '--').toString();
         return `<span class="px-2.5 py-1 rounded-full bg-white/5 text-xs ${map[copy] || 'text-slate-300'}">${copy.toUpperCase()}</span>`;
     };
 
-    const initials = (name) => {
-        const s = String(name || '').trim();
-        if (!s) return 'T';
-        const parts = s.split(/\s+/).filter(Boolean);
-        const a = (parts[0] || 'T')[0];
-        const b = (parts[1] || '')[0] || '';
-        return (a + b).toUpperCase();
-    };
-
     const fmtDT = (iso) => {
-        if (!iso) return '—';
+        if (!iso) return '--';
         try {
             const d = new Date(iso);
             if (Number.isNaN(d.getTime())) return String(iso);
@@ -134,21 +201,98 @@
         }
     };
 
-    const iconBtn = (action, id, icon, label) => `
-        <button type="button" data-action="${action}" data-id="${id}"
-            class="h-9 w-9 rounded-lg bg-white/5 border border-white/10 text-slate-200 hover:text-white hover:bg-white/10 transition inline-flex items-center justify-center"
-            title="${label}" aria-label="${label}">
-            <i class="${icon}"></i>
-        </button>
-    `;
+    const detailEls = {
+        backdrop: el('acct-detail-backdrop'),
+        drawer: el('acct-detail-drawer'),
+        username: el('acct-detail-username'),
+        name: el('acct-detail-name'),
+        statusChip: el('acct-detail-status-chip'),
+        teacherChip: el('acct-detail-teacher-chip'),
+        classesCount: el('acct-detail-classes-count'),
+        lastLogin: el('acct-detail-last-login'),
+        created: el('acct-detail-created'),
+        classes: el('acct-detail-classes'),
+        toggle: el('acct-detail-toggle'),
+    };
+
+    const getAssignedClassNames = (ids) => {
+        const classMap = new Map(state.classes.map(c => [Number(c.id), c.name]));
+        return (ids || []).map(id => classMap.get(Number(id)) || `Class #${id}`);
+    };
+
+    const setDrawerOpen = (open) => {
+        detailEls.backdrop?.classList.toggle('hidden', !open);
+        if (open) detailEls.drawer?.classList.remove('translate-x-full');
+        else detailEls.drawer?.classList.add('translate-x-full');
+    };
+
+    const renderDetailDrawer = () => {
+        const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+        if (!acct) return;
+        const status = (acct.status || '').toString() || 'disabled';
+        const classNames = getAssignedClassNames(state.detailClassIds);
+
+        detailEls.username.textContent = acct.username || '--';
+        detailEls.name.textContent = acct.teacher_name || 'Teacher';
+        detailEls.statusChip.textContent = status.toUpperCase();
+        detailEls.statusChip.className = `px-2 py-0.5 rounded-full bg-white/5 ${status === 'active' ? 'text-neon' : 'text-slate-300'}`;
+        detailEls.teacherChip.textContent = `ID ${acct.teacher_id ?? '--'}`;
+        detailEls.classesCount.textContent = String(classNames.length);
+        detailEls.lastLogin.textContent = fmtDT(acct.last_login);
+        detailEls.created.textContent = fmtDT(acct.created_at);
+        detailEls.toggle.textContent = status === 'active' ? 'Disable account' : 'Enable account';
+
+        if (!classNames.length) {
+            detailEls.classes.innerHTML = '<p class="text-slate-400 col-span-2">No classes assigned.</p>';
+        } else {
+            detailEls.classes.innerHTML = classNames.map(name => `<div class="glass rounded-md px-2 py-1 border border-white/5">${name}</div>`).join('');
+        }
+    };
+
+    const openDetailDrawer = async (acct) => {
+        state.detailAccountId = acct.id;
+        state.detailClassIds = [];
+        detailEls.classes.innerHTML = '<p class="text-slate-400">Loading...</p>';
+        renderDetailDrawer();
+        setDrawerOpen(true);
+        try {
+            const res = await fetch(`/api/v1/teacher-accounts/${acct.id}/classes`);
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(json?.message || 'Failed');
+            state.detailClassIds = (json.class_ids || []).map(Number);
+        } catch {
+            state.detailClassIds = [];
+            detailEls.classes.innerHTML = '<p class="text-red-300 col-span-2">Failed to load assigned classes.</p>';
+            return;
+        }
+        renderDetailDrawer();
+    };
 
     const render = () => {
         const q = state.filter.trim().toLowerCase();
-        const data = state.accounts.filter(a => {
+        const filtered = state.accounts.filter(a => {
             if (!q) return true;
             return String(a.teacher_name || '').toLowerCase().includes(q) ||
                 String(a.username || '').toLowerCase().includes(q);
         });
+        const total = filtered.length;
+        const pageSize = Math.max(1, Number(state.pageSize) || 20);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        state.page = Math.min(Math.max(1, state.page), totalPages);
+        const startIdx = (state.page - 1) * pageSize;
+        const data = filtered.slice(startIdx, startIdx + pageSize);
+
+        const summary = el('acct-page-summary');
+        const indicator = el('acct-page-indicator');
+        const prev = el('acct-page-prev');
+        const next = el('acct-page-next');
+        if (summary) {
+            if (!total) summary.textContent = '0 accounts';
+            else summary.textContent = `Showing ${startIdx + 1}-${Math.min(startIdx + data.length, total)} of ${total}`;
+        }
+        if (indicator) indicator.textContent = `${state.page} / ${totalPages}`;
+        if (prev) prev.disabled = state.page <= 1;
+        if (next) next.disabled = state.page >= totalPages;
 
         const wrap = el('acct-list');
         if (!data.length) {
@@ -158,96 +302,42 @@
 
         wrap.innerHTML = data.map(a => {
             const classesCount = Number(a.assigned_classes_count || 0);
-            const teacherName = a.teacher_name || 'Teacher';
-            const teacherActive = (typeof a.teacher_active === 'number' ? a.teacher_active === 1 : !!a.teacher_active);
-            const lastLogin = a.last_login ? fmtDT(a.last_login) : '—';
-            const created = a.created_at ? fmtDT(a.created_at) : '—';
             const status = (a.status || '').toString();
 
-            // Mobile: card layout. Desktop: table-like grid.
             return `
-                <div class="px-4 py-3 hover:bg-white/5 transition">
-                    <div class="flex items-start justify-between gap-3 lg:hidden">
-                        <div class="flex items-start gap-3">
-                            <div class="h-11 w-11 rounded-xl bg-gradient-to-br from-primary via-neon to-mint flex items-center justify-center text-midnight font-semibold">
-                                ${initials(teacherName)}
-                            </div>
-                            <div>
-                                <p class="text-white">${teacherName} ${teacherActive ? '' : '<span class="text-xs text-amber-300">(Inactive)</span>'}</p>
-                                <p class="text-xs text-slate-400">username: <span class="text-slate-200">${a.username}</span> • ${classesCount} classes</p>
-                                <p class="text-xs text-slate-400 mt-1">last login: ${lastLogin}</p>
-                            </div>
+                <div class="px-3 py-2 hover:bg-white/5 transition">
+                    <div class="flex items-center justify-between gap-3 lg:hidden">
+                        <div class="min-w-0">
+                            <button type="button" data-open-detail="${a.id}" class="text-sm text-white hover:text-neon transition truncate text-left">${a.username || '--'}</button>
+                            <p class="text-xs text-slate-400 mt-0.5">${classesCount} classes</p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
+                        <div class="flex items-center gap-2">
                             ${pill(status)}
-                            <div class="flex items-center gap-2">
-                                ${iconBtn('classes', a.id, 'fas fa-layer-group', 'Edit classes')}
-                                ${iconBtn('take', a.id, 'fas fa-link', 'Generate take link')}
-                                ${iconBtn('reset', a.id, 'fas fa-key', 'Reset password')}
-                                ${iconBtn('toggle', a.id, status === 'active' ? 'fas fa-ban' : 'fas fa-check', status === 'active' ? 'Disable' : 'Enable')}
-                            </div>
+                            <button type="button" data-open-detail="${a.id}" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition text-xs">Detail</button>
                         </div>
                     </div>
 
                     <div class="hidden lg:grid grid-cols-12 gap-2 items-center">
-                        <div class="col-span-4 flex items-center gap-3">
-                            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-primary via-neon to-mint flex items-center justify-center text-midnight font-semibold">
-                                ${initials(teacherName)}
-                            </div>
-                            <div>
-                                <p class="text-white">${teacherName} ${teacherActive ? '' : '<span class="text-xs text-amber-300">(Inactive)</span>'}</p>
-                                <p class="text-xs text-slate-400">teacher_id: ${a.teacher_id} • created: ${created}</p>
-                            </div>
+                        <div class="col-span-6 text-slate-200 min-w-0">
+                            <button type="button" data-open-detail="${a.id}" class="text-sm text-white hover:text-neon transition truncate text-left">${a.username || '--'}</button>
                         </div>
                         <div class="col-span-2 text-slate-200">
-                            <p class="text-sm">${a.username}</p>
+                            <span class="px-2.5 py-1 rounded-full bg-white/5 text-xs">${classesCount}</span>
                         </div>
-                        <div class="col-span-2 text-slate-200">
-                            <span class="px-3 py-1 rounded-full bg-white/5 text-xs">${classesCount}</span>
-                        </div>
-                        <div class="col-span-2 text-slate-200">
-                            <span class="text-xs">${lastLogin}</span>
-                        </div>
-                        <div class="col-span-1">${pill(status)}</div>
-                        <div class="col-span-1 flex justify-end gap-2">
-                            ${iconBtn('classes', a.id, 'fas fa-layer-group', 'Edit classes')}
-                            ${iconBtn('take', a.id, 'fas fa-link', 'Generate take link')}
-                            ${iconBtn('reset', a.id, 'fas fa-key', 'Reset password')}
-                            ${iconBtn('toggle', a.id, status === 'active' ? 'fas fa-ban' : 'fas fa-check', status === 'active' ? 'Disable' : 'Enable')}
+                        <div class="col-span-2">${pill(status)}</div>
+                        <div class="col-span-2 flex justify-end">
+                            <button type="button" data-open-detail="${a.id}" class="h-8 px-2.5 rounded-md glass text-slate-200 hover:text-white transition text-xs">Detail</button>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
 
-        wrap.querySelectorAll('button[data-action][data-id]').forEach(btn => {
+        wrap.querySelectorAll('button[data-open-detail]').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const id = btn.getAttribute('data-id');
-                const action = btn.getAttribute('data-action');
+                const id = btn.getAttribute('data-open-detail');
                 const acct = state.accounts.find(x => String(x.id) === String(id));
-                if (!acct) return;
-
-                if (action === 'toggle') {
-                    const next = acct.status === 'active' ? 'disabled' : 'active';
-                    await updateAccount(id, { status: next });
-                }
-
-                if (action === 'reset') {
-                    if (!confirm('Reset password for this teacher account?')) return;
-                    const res = await updateAccount(id, { reset_password: true });
-                    if (res && res.password) showPassword(res.password);
-                }
-
-                if (action === 'classes') {
-                    await openClassesModal(acct);
-                }
-
-                if (action === 'take') {
-                    const ttl = 24;
-                    if (!confirm(`Generate a ${ttl}h take-attendance link for ${acct.teacher_name}?`)) return;
-                    const out = await createTakeLink(acct.teacher_id, acct.teacher_name, ttl);
-                    if (out?.take_url) showTakeLink(out.take_url, out.expires_at);
-                }
+                if (acct) await openDetailDrawer(acct);
             });
         });
     };
@@ -283,6 +373,11 @@
         if (!res.ok) throw new Error('Failed to load accounts');
         state.accounts = await res.json();
         render();
+        if (state.detailAccountId) {
+            const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+            if (acct) renderDetailDrawer();
+            else setDrawerOpen(false);
+        }
     };
 
     const createAccount = async () => {
@@ -355,18 +450,26 @@
 
     const updateAccount = async (id, patch) => {
         setError('');
-        const res = await fetch(`/api/v1/teacher-accounts/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(patch)
-        });
-        const json = await res.json().catch(() => null);
-        if (!res.ok) {
-            setError(json?.message || 'Failed to update account');
+        try {
+            const res = await fetch(`/api/v1/teacher-accounts/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patch)
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+                setError(json?.message || 'Failed to update account');
+                return null;
+            }
+            await loadAccounts();
+            if (state.detailAccountId && String(state.detailAccountId) === String(id)) {
+                renderDetailDrawer();
+            }
+            return json;
+        } catch {
+            setError('Network error while updating account.');
             return null;
         }
-        await loadAccounts();
-        return json;
     };
 
     const showTakeLink = (url, expiresAt) => {
@@ -403,41 +506,43 @@
     const modal = (() => {
         const root = document.createElement('div');
         root.id = 'classes-modal';
-        root.className = 'fixed inset-0 bg-black/60 hidden z-50';
+        root.className = 'fixed inset-0 bg-black/60 hidden z-[70]';
         root.innerHTML = `
-            <div class="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto md:w-[28rem] glass border border-white/10 shadow-glow rounded-t-2xl md:rounded-none md:rounded-l-2xl p-5">
+            <div class="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto md:w-[24rem] glass border border-white/10 shadow-glow rounded-t-xl md:rounded-none md:rounded-l-xl p-3.5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs uppercase tracking-[0.25em] text-slate-400">Assignments</p>
                         <p class="text-lg text-white font-medium" id="modal-title">Teacher</p>
                         <p class="text-xs text-slate-400 mt-1" id="modal-sub">Pick classes for this teacher.</p>
                     </div>
-                    <button id="modal-close" class="h-10 w-10 rounded-xl glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring">
+                    <button id="modal-close" class="h-9 w-9 rounded-lg glass flex items-center justify-center text-slate-200 hover:text-white transition shadow-ring">
                         <i class="fas fa-xmark"></i>
                     </button>
                 </div>
 
-                <div class="mt-4 space-y-3">
+                <div class="mt-2.5 space-y-2">
                     <label class="text-xs text-slate-400">Assigned classes</label>
-                    <select id="modal-classes" multiple class="w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-neon/60 min-h-[240px]"></select>
-                    <p class="text-xs text-slate-400">Hold Ctrl (Windows) to select multiple.</p>
+                    <div id="modal-classes-list" class="max-h-56 overflow-y-auto no-scrollbar space-y-1.5 rounded-lg border border-white/10 p-2 bg-white/5"></div>
                 </div>
 
-                <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button id="modal-save" class="h-11 px-4 rounded-xl neon-pill text-sm font-medium flex items-center justify-center gap-2">
+                <div class="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button id="modal-save" class="h-9 px-3 rounded-lg neon-pill text-sm font-medium flex items-center justify-center gap-2">
                         <i class="fas fa-floppy-disk"></i><span>Save</span>
                     </button>
-                    <button id="modal-clear" class="h-11 px-4 rounded-xl glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2">
+                    <button id="modal-clear" class="h-9 px-3 rounded-lg glass text-slate-200 hover:text-white transition shadow-ring flex items-center justify-center gap-2">
                         <i class="fas fa-ban"></i><span>Clear</span>
                     </button>
                 </div>
 
-                <div class="mt-4 text-sm text-red-300" id="modal-error"></div>
+                <div class="mt-3 text-xs text-slate-300" id="modal-status"></div>
+                <div class="mt-1 text-sm text-red-300" id="modal-error"></div>
             </div>
         `;
         document.body.appendChild(root);
 
-        const close = () => root.classList.add('hidden');
+        const close = () => {
+            root.classList.add('hidden');
+        };
         root.addEventListener('click', (e) => { if (e.target === root) close(); });
         root.querySelector('#modal-close')?.addEventListener('click', close);
 
@@ -446,56 +551,118 @@
             close,
             title: root.querySelector('#modal-title'),
             sub: root.querySelector('#modal-sub'),
-            select: root.querySelector('#modal-classes'),
+            list: root.querySelector('#modal-classes-list'),
             save: root.querySelector('#modal-save'),
             clear: root.querySelector('#modal-clear'),
+            status: root.querySelector('#modal-status'),
             error: root.querySelector('#modal-error'),
         };
     })();
 
     let modalAccount = null;
+    let modalSelectedClassIds = new Set();
+
+    const renderModalClassPicker = () => {
+        const rows = state.classes || [];
+        modal.list.innerHTML = rows.map(c => {
+            const selected = modalSelectedClassIds.has(Number(c.id));
+            return `
+                <button type="button" data-class-option="${c.id}" class="w-full text-left rounded-md px-2.5 py-2 border transition text-xs flex items-center justify-between gap-2 ${selected ? 'bg-white/10 border-neon/50 text-white' : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'}">
+                    <span class="truncate">${c.name}</span>
+                    <span class="px-2 py-0.5 rounded-full ${selected ? 'bg-neon/20 text-neon border border-neon/40' : 'bg-white/10 text-slate-300 border border-white/10'}">${selected ? 'ON' : 'OFF'}</span>
+                </button>
+            `;
+        }).join('');
+
+        modal.list.querySelectorAll('button[data-class-option]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = Number(btn.getAttribute('data-class-option'));
+                if (!Number.isFinite(id)) return;
+                if (modalSelectedClassIds.has(id)) modalSelectedClassIds.delete(id);
+                else modalSelectedClassIds.add(id);
+                renderModalClassPicker();
+            });
+        });
+    };
 
     const openClassesModal = async (acct) => {
         modalAccount = acct;
         modal.error.textContent = '';
+        modal.status.textContent = '';
         modal.title.textContent = acct.teacher_name || 'Teacher';
         modal.sub.textContent = `username: ${acct.username} | teacher_id: ${acct.teacher_id}`;
         modal.root.classList.remove('hidden');
-
-        // Populate options
-        modal.select.innerHTML = state.classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        modalSelectedClassIds = new Set();
+        renderModalClassPicker();
 
         // Load current assignments
         try {
             const res = await fetch(`/api/v1/teacher-accounts/${acct.id}/classes`);
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.message || 'Failed');
-
-            const ids = new Set((json.class_ids || []).map(Number));
-            Array.from(modal.select.options).forEach(o => { o.selected = ids.has(Number(o.value)); });
+            modalSelectedClassIds = new Set((json.class_ids || []).map(Number));
+            renderModalClassPicker();
         } catch {
             modal.error.textContent = 'Failed to load current class assignments.';
         }
     };
 
     modal.clear?.addEventListener('click', () => {
-        Array.from(modal.select.options).forEach(o => { o.selected = false; });
+        modalSelectedClassIds = new Set();
+        renderModalClassPicker();
+        modal.status.textContent = 'Selection cleared.';
+        modal.error.textContent = '';
     });
 
     modal.save?.addEventListener('click', async () => {
         if (!modalAccount) return;
         modal.error.textContent = '';
-        const classIds = Array.from(modal.select.selectedOptions || []).map(o => Number(o.value)).filter(v => Number.isFinite(v));
+        modal.status.textContent = 'Saving...';
+        modal.save.disabled = true;
+        modal.save.classList.add('opacity-60', 'cursor-not-allowed');
+        const classIds = Array.from(modalSelectedClassIds).filter(v => Number.isFinite(v));
         const res = await updateAccount(modalAccount.id, { class_ids: classIds });
         if (!res) {
             modal.error.textContent = el('acct-error').textContent || 'Failed to save assignments.';
+            modal.status.textContent = '';
+            modal.save.disabled = false;
+            modal.save.classList.remove('opacity-60', 'cursor-not-allowed');
             return;
         }
-        modal.close();
+        modal.status.textContent = 'Saved successfully.';
+        modal.error.textContent = '';
+        modal.save.disabled = false;
+        modal.save.classList.remove('opacity-60', 'cursor-not-allowed');
+        state.detailClassIds = classIds;
+        renderDetailDrawer();
+        setTimeout(() => {
+            modal.status.textContent = '';
+            modal.close();
+        }, 700);
     });
 
     el('acct-search')?.addEventListener('input', (e) => {
         state.filter = e.target.value;
+        state.page = 1;
+        render();
+    });
+    el('acct-page-size')?.addEventListener('change', (e) => {
+        state.pageSize = Number(e.target.value) || 20;
+        state.page = 1;
+        render();
+    });
+    el('acct-page-prev')?.addEventListener('click', () => {
+        state.page = Math.max(1, state.page - 1);
+        render();
+    });
+    el('acct-page-next')?.addEventListener('click', () => {
+        const totalPages = Math.max(1, Math.ceil(state.accounts.filter(a => {
+            const q = state.filter.trim().toLowerCase();
+            if (!q) return true;
+            return String(a.teacher_name || '').toLowerCase().includes(q) ||
+                String(a.username || '').toLowerCase().includes(q);
+        }).length / Math.max(1, Number(state.pageSize) || 20)));
+        state.page = Math.min(totalPages, state.page + 1);
         render();
     });
     // Attach both direct and delegated handlers (guards against rare DOM timing issues).
@@ -522,9 +689,57 @@
         } catch {}
     });
 
+    el('acct-detail-close')?.addEventListener('click', () => setDrawerOpen(false));
+    el('acct-detail-backdrop')?.addEventListener('click', () => setDrawerOpen(false));
+
+    el('acct-detail-edit-classes')?.addEventListener('click', async () => {
+        const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+        if (!acct) return;
+        await openClassesModal(acct);
+    });
+
+    el('acct-detail-toggle')?.addEventListener('click', async () => {
+        const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+        if (!acct) return;
+        const next = acct.status === 'active' ? 'disabled' : 'active';
+        await updateAccount(acct.id, { status: next });
+        const updated = state.accounts.find(x => String(x.id) === String(acct.id));
+        if (updated) renderDetailDrawer();
+    });
+
+    el('acct-detail-reset')?.addEventListener('click', async () => {
+        const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+        if (!acct) return;
+        const newPassword = prompt('Enter new password (minimum 8 characters):', '');
+        if (newPassword === null) return;
+        const trimmed = String(newPassword || '').trim();
+        if (trimmed.length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
+        const confirmPassword = prompt('Confirm new password:', '');
+        if (confirmPassword === null) return;
+        if (trimmed !== String(confirmPassword || '')) {
+            setError('Password confirmation does not match.');
+            return;
+        }
+        const res = await updateAccount(acct.id, { reset_password: true, new_password: trimmed });
+        if (res && res.password) showPassword(res.password);
+    });
+
+    el('acct-detail-take')?.addEventListener('click', async () => {
+        const acct = state.accounts.find(x => String(x.id) === String(state.detailAccountId));
+        if (!acct) return;
+        const ttl = 24;
+        if (!confirm(`Generate a ${ttl}h take-attendance link for ${acct.teacher_name || acct.username}?`)) return;
+        const out = await createTakeLink(acct.teacher_id, acct.teacher_name || acct.username, ttl);
+        if (out?.take_url) showTakeLink(out.take_url, out.expires_at);
+    });
+
     // init
     Promise.all([loadTeachers(), loadClasses(), loadAccounts()]).catch(() => setError('Failed to load data'));
     document.addEventListener('finot:dateprefs', () => render());
 </script>
 @endpush
+
 
